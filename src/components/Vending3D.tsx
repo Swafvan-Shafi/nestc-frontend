@@ -9,13 +9,8 @@ function MachineModel({ isOpen }: { isOpen: boolean }) {
   const group = useRef<THREE.Group>(null!);
   const door = useRef<THREE.Group>(null!);
 
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
-    // Subtle breathing animation
-    if (group.current) {
-      group.current.rotation.y = Math.sin(t / 2) * 0.1;
-    }
-    // Door opening animation
+  useFrame(() => {
+    // Door opening animation only, no idle rotation
     if (door.current) {
       const targetRotation = isOpen ? -Math.PI / 2.5 : 0;
       door.current.rotation.y = THREE.MathUtils.lerp(door.current.rotation.y, targetRotation, 0.1);
@@ -59,7 +54,7 @@ function MachineModel({ isOpen }: { isOpen: boolean }) {
         <planeGeometry args={[0.2, 0.3]} />
         <meshStandardMaterial color="#2E75B6" emissive="#2E75B6" emissiveIntensity={2} />
       </mesh>
-      
+
       <ContactShadows position={[0, -1.1, 0]} opacity={0.4} scale={5} blur={2.4} far={0.8} />
     </group>
   );
@@ -69,7 +64,7 @@ export default function Vending3D() {
   const [hovered, setHovered] = useState(false);
 
   return (
-    <div 
+    <div
       className="w-full h-[400px] md:h-[500px] cursor-pointer"
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
@@ -78,18 +73,16 @@ export default function Vending3D() {
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} intensity={1.5} />
         <spotLight position={[-10, 10, 10]} angle={0.15} penumbra={1} intensity={1} />
-        
+
         <PresentationControls
           global
           config={{ mass: 2, tension: 500 }}
-          snap={{ mass: 4, tension: 1500 }}
+          //snap={{ mass: 4, tension: 1500 }}
           rotation={[0, 0, 0]}
           polar={[-Math.PI / 4, Math.PI / 4]}
           azimuth={[-Math.PI / 4, Math.PI / 4]}
         >
-          <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-            <MachineModel isOpen={hovered} />
-          </Float>
+          <MachineModel isOpen={hovered} />
         </PresentationControls>
       </Canvas>
     </div>
