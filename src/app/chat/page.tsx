@@ -3,7 +3,7 @@
 import PageHeader from '@/components/PageHeader';
 import { motion } from 'framer-motion';
 import { MessageSquare, Send, User, Clock, Check, Loader2, ImageIcon, CheckCircle, Tag, ShoppingBag, ExternalLink, Image as ImagePlaceholder } from 'lucide-react';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -11,7 +11,7 @@ import axios from 'axios';
 
 const SOCKET_URL = 'http://localhost:5000';
 
-export default function ChatPage() {
+function ChatContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sellerId = searchParams.get('sellerId');
@@ -393,5 +393,13 @@ export default function ChatPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-white"><Loader2 className="animate-spin" /></div>}>
+      <ChatContent />
+    </Suspense>
   );
 }
