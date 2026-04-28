@@ -1,0 +1,73 @@
+'use client';
+
+import { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import { Map as MapIcon, MapPin, Navigation, Navigation2 } from 'lucide-react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for Leaflet default icon issues in Next.js
+const DefaultIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
+const NITC_BOUNDS = '75.9200,11.3100,75.9500,11.3300'; // lon1,lat1,lon2,lat2
+
+export function MapPicker({ onSelect }: { onSelect: (addr: string) => void }) {
+  const MapEvents = () => {
+    useMapEvents({
+      click: async (e) => {
+        const { lat, lng } = e.latlng;
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=en&viewbox=${NITC_BOUNDS}&bounded=1`);
+          const data = await res.json();
+          onSelect(data.display_name);
+        } catch (err) {
+          onSelect(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        }
+      },
+    });
+    return null;
+  };
+
+  return (
+    <div className="h-[400px] w-full rounded-3xl overflow-hidden relative border border-white/10 shadow-2xl mt-4">
+      <MapContainer center={[11.3216, 75.9338]} zoom={16} style={{ height: '100%', width: '100%' }}>
+         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+         <MapEvents />
+      </MapContainer>
+    </div>
+  );
+}
+
+export function MapViewer({ lat, lng, onMove }: { lat: number, lng: number, onMove: (lat: number, lng: number) => void }) {
+  const MapRef = () => {
+    const map = useMap();
+    useEffect(() => { if (lat && lng) map.flyTo([lat, lng], 17); }, [lat, lng, map]);
+    return null;
+  };
+
+  const eventHandlers = {
+    dragend(e: any) {
+      const marker = e.target;
+      if (marker) {
+        const { lat, lng } = marker.getLatLng();
+        onMove(lat, lng);
+      }
+    },
+  };
+
+  return (
+    <div className="h-[400px] w-full rounded-3xl overflow-hidden relative border border-white/10 shadow-2xl mt-4">
+      <MapContainer center={[lat, lng]} zoom={17} style={{ height: '100%', width: '100%' }}>
+         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+         <Marker position={[lat, lng]} draggable={true} eventHandlers={eventHandlers} />
+         <MapRef />
+      </MapContainer>
+    </div>
+  );
+}
