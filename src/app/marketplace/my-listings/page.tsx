@@ -144,8 +144,8 @@ export default function MyListingsPage() {
                           <div className="w-full h-full flex items-center justify-center text-gray-700 font-black text-xs uppercase tracking-widest text-center px-2">No Photo</div>
                         )}
                         {isCompleted && (
-                          <div className="absolute inset-0 bg-emerald-600/80 backdrop-blur-sm flex items-center justify-center">
-                             <span className="text-white font-black text-[10px] uppercase tracking-[0.3em] rotate-[-15deg] border-2 border-white px-2 py-1">{listing.type === 'have' ? 'SOLD' : 'PURCHASED'}</span>
+                          <div className="absolute inset-0 bg-emerald-600/80 backdrop-blur-sm flex items-center justify-center p-2">
+                             <span className="text-white font-black text-[10px] uppercase tracking-[0.2em] border-2 border-white px-2 py-1 bg-[#0a0a0b]/20 text-center">{listing.type === 'have' ? 'SOLD' : 'PURCHASED'}</span>
                           </div>
                         )}
                       </div>
@@ -163,7 +163,7 @@ export default function MyListingsPage() {
                         </p>
                       </div>
 
-                      <div className="flex gap-2 mt-4">
+                      <div className="flex flex-col sm:flex-row gap-2 mt-4">
                         {listing.type === 'have' && !isCompleted && (
                           <button 
                             disabled={actionLoading !== null}
@@ -188,7 +188,7 @@ export default function MyListingsPage() {
                           className={`flex items-center justify-center gap-2 p-3 bg-red-600/10 text-red-500 rounded-xl hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 ${isCompleted ? 'flex-1' : ''}`}
                         >
                           <Trash2 size={16} />
-                          {actionLoading === listing.id ? <span className="text-[10px] font-black uppercase tracking-widest ml-1">Deleting...</span> : (isCompleted ? <span className="text-[10px] font-black uppercase tracking-widest ml-1">Remove</span> : null)}
+                          {actionLoading === listing.id ? <span className="text-[10px] font-black uppercase tracking-widest ml-1">Deleting...</span> : (isCompleted ? <span className="text-[10px] font-black uppercase tracking-widest ml-1">Remove</span> : <span className="sr-only">Delete</span>)}
                         </button>
                       </div>
                     </div>
