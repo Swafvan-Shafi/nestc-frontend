@@ -45,7 +45,6 @@ function ChatContent() {
   const formatImageUrl = (url: string) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    // Fix: Remove double /api/v1 and ensure correct server path
     const cleanBase = BASE_URL.replace('/api/v1', '');
     const cleanUrl = url.startsWith('/') ? url : `/${url}`;
     return `${cleanBase}${cleanUrl}`;
@@ -58,18 +57,15 @@ function ChatContent() {
   };
 
   const fetchProductPreview = useCallback(async (lId: string) => {
-    if (!lId || lId === 'null' || lId === 'undefined') return;
-    if (productDataCache[lId]) return;
+    if (!lId || lId === 'null') return;
     try {
       const token = localStorage.getItem('nestc_token');
       const res = await axios.get(`${BASE_URL}/marketplace/listings/${lId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setProductDataCache(prev => ({ ...prev, [lId]: res.data }));
-    } catch (e) {
-      console.error('Failed to fetch product:', e);
-    }
-  }, [productDataCache]);
+    } catch (e) { console.error(e); }
+  }, []);
 
   const fetchMessages = async (chatId: string) => {
     try {
@@ -78,11 +74,7 @@ function ChatContent() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMessages(Array.isArray(res.data) ? res.data : []);
-    } catch (err: any) {
-      if (!chatId.startsWith('temp_') && !chatId.startsWith('p2p_')) {
-        setErrorMsg('History could not be loaded.');
-      }
-    }
+    } catch (err) { setMessages([]); }
   };
 
   const fetchConversations = async (userId: string) => {
@@ -106,7 +98,6 @@ function ChatContent() {
 
       if (sellerId && urlListingId) {
         const detId = getDeterministicId(userId, sellerId, urlListingId);
-        
         const exists = list.find((c: any) => c.id === detId);
         if (!exists) {
           const newEntry = {
@@ -116,26 +107,39 @@ function ChatContent() {
             listingId: urlListingId,
             isTemp: true,
             time: 'Now',
-            lastMessage: 'Regarding: ' + (urlTitle || 'Product')
+            lastMessage: 'Interested in: ' + (urlTitle || 'Product')
           };
           list = [newEntry, ...list];
-          if (!activeChatRef.current) setActiveChat(newEntry);
-        } else if (!activeChatRef.current) {
+          setActiveChat(newEntry);
+        } else {
           setActiveChat(exists);
         }
-      } else if (!activeChatRef.current && list.length > 0) {
+      } else if (!activeChat && list.length > 0) {
         setActiveChat(list[0]);
       }
-      
       setChats(list);
-    } catch (err) {
-      console.error('Failed to load conversations:', err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
-  // ... (useEffect for user/socket stays same)
+  useEffect(() => {
+    const savedUser = localStorage.getItem('nestc_user');
+    if (savedUser) {
+      const parsedUser = JSON.parse(savedUser);
+      setUser(parsedUser);
+      const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
+      socketRef.current = socket;
+      socket.on('connect', () => { setIsConnected(true); setIsSocketReady(true); socket.emit('register_user', parsedUser.id); });
+      socket.on('new_message', (data) => {
+        if (activeChatRef.current?.id === data.chatId || activeChatRef.current?.id === data.message.chat_id) {
+          setMessages(prev => prev.some(m => m.id === data.message.id) ? prev : [...prev, data.message]);
+        }
+        fetchConversations(parsedUser.id);
+      });
+      fetchConversations(parsedUser.id);
+    }
+    return () => { socketRef.current?.disconnect(); };
+  }, [sellerId, urlListingId]);
 
   useEffect(() => {
     if (activeChat?.id) {
@@ -145,34 +149,26 @@ function ChatContent() {
   }, [activeChat?.id]);
 
   useEffect(() => {
-    if (urlListingId && urlTitle && !productDataCache[urlListingId]) {
-      setProductDataCache(prev => ({
-        ...prev,
-        [urlListingId]: { title: urlTitle, price: urlPrice, photo_url: urlImg }
-      }));
+    if (urlListingId && urlTitle) {
+      setProductDataCache(prev => ({ ...prev, [urlListingId]: { title: urlTitle, price: urlPrice, photo_url: urlImg } }));
     }
   }, [urlListingId, urlTitle, urlImg]);
 
-  // ... (enquiry logic stays same)
+  useEffect(() => {
+    if (activeChat && urlListingId && isSocketReady && hasSentAutoEnquiry.current !== urlListingId) {
+       const content = `PRODUCT_ENQUIRY:${urlListingId}:Hi, I'm interested in this!`;
+       socketRef.current?.emit('send_message', { chatId: activeChat.id, senderId: user.id, receiverId: activeChat.sellerId, content, listingId: urlListingId });
+       hasSentAutoEnquiry.current = urlListingId;
+       setMessages(prev => [...prev, { id: 'temp_'+Date.now(), sender_id: user.id, content, created_at: new Date().toISOString() }]);
+    }
+  }, [activeChat?.id, isSocketReady]);
 
   const handleSend = () => {
     if (!message.trim() || !activeChat || !user) return;
     const content = message.trim();
-    const messageData = {
-      chatId: activeChat.id,
-      senderId: user.id,
-      receiverId: activeChat.sellerId || activeChat.chatSellerId,
-      content,
-      listingId: activeChat.listingId
-    };
-    socketRef.current?.emit('send_message', messageData);
+    socketRef.current?.emit('send_message', { chatId: activeChat.id, senderId: user.id, receiverId: activeChat.sellerId || activeChat.chatSellerId, content, listingId: activeChat.listingId });
     setMessages(prev => [...prev, { id: 'temp_'+Date.now(), sender_id: user.id, content, created_at: new Date().toISOString() }]);
     setMessage('');
-  };
-
-  const handleRefresh = () => {
-    if (user?.id) fetchConversations(user.id);
-    if (activeChat?.id) fetchMessages(activeChat.id);
   };
 
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
@@ -180,96 +176,81 @@ function ChatContent() {
 
   return (
     <div className="min-h-screen bg-[#050505]">
-      <PageHeader title="Messenger" subtitle="Live Trade Chat" />
+      <PageHeader title="NestC Messenger" subtitle="WhatsApp style trade chat" />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="bg-white/[0.02] border border-white/10 rounded-[2.5rem] overflow-hidden flex h-[750px] shadow-2xl backdrop-blur-3xl">
           
-          <div className={`${mobileView === 'chat' ? 'hidden' : 'flex'} md:flex flex-col w-full md:w-96 border-r border-white/5`}>
-            <div className="p-8 border-b border-white/5">
-              <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest">Conversations</h2>
+          {/* Sidebar - List of chats */}
+          <div className={`${mobileView === 'chat' ? 'hidden' : 'flex'} md:flex flex-col w-full md:w-96 border-r border-white/5 bg-black/40`}>
+            <div className="p-8 border-b border-white/5 flex justify-between items-center">
+              <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest">Recent Chats</h2>
+              <button onClick={() => user && fetchConversations(user.id)} className="p-2 hover:bg-white/5 rounded-full text-gray-600"><RefreshCw size={16}/></button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
               {chats.map(chat => (
-                <div 
-                  key={chat.id} 
-                  onClick={() => setActiveChat(chat)}
-                  className={`p-5 rounded-3xl cursor-pointer transition-all border ${activeChat?.id === chat.id ? 'bg-blue-600 border-blue-500 shadow-xl' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
-                >
+                <div key={chat.id} onClick={() => setActiveChat(chat)} className={`p-5 rounded-[1.5rem] cursor-pointer transition-all border ${activeChat?.id === chat.id ? 'bg-blue-600 border-blue-500 shadow-xl' : 'bg-white/5 border-transparent hover:bg-white/10'}`}>
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-bold text-white text-sm">{chat.name}</span>
-                    <span className="text-[10px] opacity-40">{chat.time}</span>
+                    <span className="font-bold text-white text-sm truncate pr-2">{chat.name}</span>
+                    <span className="text-[9px] opacity-40 font-bold whitespace-nowrap">{chat.time}</span>
                   </div>
-                  <p className="text-xs text-gray-500 truncate">{chat.lastMessage?.startsWith('PRODUCT_ENQUIRY:') ? '📦 Product Interest' : chat.lastMessage}</p>
+                  <p className={`text-xs truncate ${activeChat?.id === chat.id ? 'text-white/70' : 'text-gray-500'}`}>{chat.lastMessage?.startsWith('PRODUCT_ENQUIRY:') ? '📦 Regarding product' : chat.lastMessage}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className={`${mobileView === 'list' ? 'hidden' : 'flex'} md:flex flex-1 flex-col bg-black/20`}>
+          {/* Chat Area */}
+          <div className={`${mobileView === 'list' ? 'hidden' : 'flex'} md:flex flex-1 flex-col bg-black/20 relative`}>
             {activeChat ? (
               <>
-                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02] backdrop-blur-xl">
                   <div className="flex items-center gap-4">
-                    <button onClick={() => setMobileView('list')} className="md:hidden p-2 -ml-2 text-gray-400"><ChevronLeft /></button>
-                    <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg">{activeChat.name.charAt(0)}</div>
+                    <button onClick={() => setMobileView('list')} className="md:hidden p-2 text-gray-400"><ChevronLeft/></button>
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg">{activeChat.name.charAt(0).toUpperCase()}</div>
                     <div>
-                      <h2 className="font-bold text-white">{activeChat.name}</h2>
+                      <h2 className="font-bold text-white leading-tight">{activeChat.name}</h2>
                       <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
-                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{isConnected ? 'Active' : 'Offline'}</span>
+                        <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{isConnected ? 'Connected' : 'Offline'}</span>
                       </div>
                     </div>
                   </div>
-                  <button onClick={handleRefresh} className="p-2 hover:bg-white/10 rounded-full text-gray-500"><RefreshCw size={20}/></button>
                 </div>
 
-                <div className="flex-1 p-8 overflow-y-auto space-y-6 custom-scrollbar">
+                <div className="flex-1 p-8 overflow-y-auto space-y-6 custom-scrollbar bg-gradient-to-b from-transparent to-black/20">
                   {messages.map((msg, i) => {
-                    const isMe = msg.sender_id === user?.id;
-                    const isProductEnquiry = msg.content?.startsWith('PRODUCT_ENQUIRY:');
-                    
-                    if (isProductEnquiry) {
-                      const parts = msg.content.split(':');
+                    const isMe = msg.sender_id === user?.id || msg.senderId === user?.id;
+                    const content = msg.content || '';
+                    if (content.startsWith('PRODUCT_ENQUIRY:')) {
+                      const parts = content.split(':');
                       const lId = parts[1];
                       const text = parts.slice(2).join(':');
+                      if (lId && !productDataCache[lId]) fetchProductPreview(lId);
                       const product = productDataCache[lId];
-                      // Exhaustive image detection
-                      const photoUrl = product?.photo_url || 
-                                       product?.photos?.[0] || 
-                                       product?.imageUrl || 
-                                       product?.photo;
-
+                      const photoUrl = product?.photo_url || product?.photos?.[0] || product?.imageUrl;
                       return (
                         <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[80%] rounded-3xl overflow-hidden shadow-2xl border ${isMe ? 'bg-blue-600 border-blue-500' : 'bg-white/10 border-white/10'}`}>
-                            <div className="p-3 flex items-center gap-4 bg-black/20 border-b border-white/5">
+                          <div className={`max-w-[85%] sm:max-w-[70%] rounded-3xl overflow-hidden shadow-2xl border ${isMe ? 'bg-blue-600 border-blue-500' : 'bg-white/10 border-white/10'}`}>
+                            <div className="p-4 flex items-center gap-4 bg-black/20 border-b border-white/5">
                               <div className="w-16 h-16 rounded-xl overflow-hidden bg-black/40 flex-shrink-0 border border-white/10">
-                                {photoUrl ? (
-                                  <img 
-                                    src={formatImageUrl(photoUrl)} 
-                                    className="w-full h-full object-cover" 
-                                    onError={(e: any) => { e.target.src = ''; e.target.style.display = 'none'; }}
-                                  />
-                                ) : (
-                                  <ImagePlaceholder className="w-full h-full p-4 opacity-20" />
-                                )}
+                                {photoUrl ? <img src={formatImageUrl(photoUrl)} className="w-full h-full object-cover" /> : <ImagePlaceholder className="w-full h-full p-4 opacity-10" />}
                               </div>
                               <div className="min-w-0">
-                                <p className="text-[8px] font-black uppercase text-blue-400 mb-1">Product Enquiry</p>
-                                <p className="text-sm font-bold text-white truncate">{product?.title || 'Loading...'}</p>
+                                <p className="text-[8px] font-black uppercase text-blue-400 mb-1">Trade Enquiry</p>
+                                <p className="text-sm font-bold text-white truncate">{product?.title || 'Loading Product...'}</p>
                                 <p className="text-xs font-black text-white/70">₹{product?.price || '...'}</p>
                               </div>
                             </div>
-                            <div className="p-5 text-sm text-white">{text}</div>
+                            <div className="p-5 text-sm text-white leading-relaxed">{text}</div>
                           </div>
                         </div>
                       );
                     }
-
                     return (
                       <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[70%] p-5 rounded-[2rem] text-sm shadow-xl ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white/5 text-gray-300 rounded-tl-none border border-white/10'}`}>
-                          {msg.content}
+                        <div className={`max-w-[75%] p-5 rounded-[2rem] text-sm leading-relaxed shadow-xl ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white/10 text-gray-300 rounded-tl-none border border-white/5'}`}>
+                          {content}
+                          <div className="flex justify-end mt-2 opacity-30 text-[9px] font-bold">{new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                         </div>
                       </div>
                     );
@@ -279,22 +260,16 @@ function ChatContent() {
 
                 <div className="p-8 border-t border-white/5 bg-black/40">
                   <div className="flex gap-4">
-                    <input 
-                      value={message} 
-                      onChange={(e) => setMessage(e.target.value)} 
-                      onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                      className="flex-1 bg-white/[0.03] border border-white/10 rounded-[2rem] px-8 py-5 text-white focus:outline-none focus:border-blue-500 transition-all"
-                      placeholder="Type a message..."
-                    />
-                    <button onClick={handleSend} className="p-5 bg-blue-600 text-white rounded-[2rem] shadow-xl hover:scale-105 transition-all"><Send size={20}/></button>
+                    <input value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} className="flex-1 bg-white/[0.03] border border-white/10 rounded-full px-8 py-5 text-white focus:outline-none focus:border-blue-500 transition-all shadow-inner" placeholder="Type a message..." />
+                    <button onClick={handleSend} className="p-5 bg-blue-600 text-white rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all"><Send size={20}/></button>
                   </div>
                 </div>
               </>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-20 text-center opacity-10">
-                <MessageSquare size={80} className="mb-6" />
-                <h2 className="text-3xl font-black uppercase tracking-tighter">NestC Messenger</h2>
-                <p>Select a student to start trading.</p>
+                <MessageSquare size={100} strokeWidth={1} className="mb-8" />
+                <h2 className="text-4xl font-black uppercase tracking-tighter mb-4">NestC Chat</h2>
+                <p className="max-w-md">Select a person from the list on the left to start your campus trade conversation.</p>
               </div>
             )}
           </div>
@@ -306,7 +281,7 @@ function ChatContent() {
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-white"><Loader2 className="animate-spin" /></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-white"><Loader2 className="animate-spin text-blue-500" size={48} /></div>}>
       <ChatContent />
     </Suspense>
   );
