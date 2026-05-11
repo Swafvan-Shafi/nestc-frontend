@@ -144,7 +144,7 @@ export default function MyListingsPage() {
                           <div className="w-full h-full flex items-center justify-center text-gray-700 font-black text-[10px] sm:text-xs uppercase tracking-widest text-center px-1 sm:px-2">No Photo</div>
                         )}
                         {isCompleted && (
-                          <div className="absolute inset-0 bg-emerald-600/80 backdrop-blur-sm flex items-center justify-center p-1 sm:p-2">
+                          <div className="absolute inset-0 bg-emerald-600/80 backdrop-blur-sm flex items-center justify-center p-1 sm:p-2 z-10">
                              <span className="text-white font-black text-[8px] sm:text-[10px] uppercase tracking-widest sm:tracking-[0.2em] border-2 border-white px-1 sm:px-2 py-0.5 sm:py-1 bg-[#0a0a0b]/20 text-center">{listing.type === 'have' ? 'SOLD' : 'PURCHASED'}</span>
                           </div>
                         )}
@@ -163,12 +163,12 @@ export default function MyListingsPage() {
                         </p>
                       </div>
 
-                      <div className="flex flex-row items-center gap-1 sm:gap-2 mt-3 sm:mt-4">
+                      <div className={`${listing.type === 'want' ? 'hidden sm:flex' : 'flex'} flex-row items-stretch gap-1 sm:gap-2 mt-3 sm:mt-4`}>
                         {listing.type === 'have' && !isCompleted && (
                           <button 
                             disabled={actionLoading !== null}
                             onClick={() => handleUpdateStatus(listing.id, 'sold')}
-                            className="flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 px-1 sm:px-3 bg-emerald-600/10 text-emerald-500 rounded-lg sm:rounded-xl hover:bg-emerald-600 hover:text-white transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                            className="flex-[3] sm:flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 px-1 sm:px-3 bg-emerald-600/10 text-emerald-500 rounded-lg sm:rounded-xl hover:bg-emerald-600 hover:text-white transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
                           >
                             <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> 
                             {actionLoading === listing.id ? 'Updating...' : (
@@ -197,11 +197,11 @@ export default function MyListingsPage() {
                         <button 
                           disabled={actionLoading !== null}
                           onClick={() => handleDelete(listing.id)}
-                          className={`flex items-center justify-center gap-1 sm:gap-2 p-2 sm:p-3 bg-red-600/10 text-red-500 rounded-lg sm:rounded-xl hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 shrink-0 ${isCompleted ? 'flex-1' : ''}`}
+                          className={`flex items-center justify-center gap-1 sm:gap-2 p-2 sm:p-3 bg-red-600/10 text-red-500 rounded-lg sm:rounded-xl hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 shrink-0 ${isCompleted ? 'flex-1' : (listing.type === 'have' ? 'flex-[1] sm:flex-none' : 'flex-none')}`}
                         >
                           <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                           {actionLoading === listing.id ? (
-                             <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest ml-0 sm:ml-1">Deleting...</span>
+                             <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ml-0 sm:ml-1 ${listing.type === 'have' && !isCompleted ? 'hidden sm:inline' : ''}`}>Deleting...</span>
                           ) : (isCompleted ? (
                              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest ml-0 sm:ml-1">Remove</span>
                           ) : (
@@ -210,6 +210,29 @@ export default function MyListingsPage() {
                         </button>
                       </div>
                     </div>
+
+                    {listing.type === 'want' && (
+                      <div className="flex sm:hidden flex-col gap-2 w-16 shrink-0 self-stretch">
+                        {!isCompleted && (
+                          <button 
+                            disabled={actionLoading !== null}
+                            onClick={() => handleUpdateStatus(listing.id, 'purchased')}
+                            className="flex-1 flex flex-col items-center justify-center gap-1 bg-emerald-600/10 text-emerald-500 rounded-lg hover:bg-emerald-600 hover:text-white transition-all disabled:opacity-50 p-1"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            <span className="text-[8px] font-black uppercase tracking-widest text-center leading-tight">{actionLoading === listing.id ? 'Upd...' : 'Purchased'}</span>
+                          </button>
+                        )}
+                        <button 
+                          disabled={actionLoading !== null}
+                          onClick={() => handleDelete(listing.id)}
+                          className={`flex-1 flex flex-col items-center justify-center gap-1 bg-red-600/10 text-red-500 rounded-lg hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 p-1`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span className="text-[8px] font-black uppercase tracking-widest text-center leading-tight">{actionLoading === listing.id ? 'Del...' : (isCompleted ? 'Remove' : 'Delete')}</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               );
