@@ -137,17 +137,20 @@ function ChatContent() {
         chatSellerId: c.chat_seller_id,
         lastMessage: c.last_message,
         time: c.last_message_time ? new Date(c.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now',
-        unreadCount: parseInt(c.unread_count) || 0
+        unreadCount: parseInt(c.unread_count) || 0,
+        isTemp: false
       }));
       
       console.log('--- CONVERSATIONS FETCHED ---', conversationList);
+      setChats(conversationList);
 
       // Enhanced uniqueness: check for seller AND listing
       const existingProductChat = conversationList.find((c: any) => 
-        (c.sellerId === sellerId || c.chatSellerId === sellerId) && c.listingId === urlListingId
+        (c.sellerId === sellerId || c.chatSellerId === sellerId) && c.listing_id === urlListingId
       );
 
       if (sellerId && !existingProductChat) {
+        console.log('--- CREATING TEMP CHAT ---');
         try {
           const sellerRes = await axios.get(`${BASE_URL}/auth/users/${sellerId}`, {
             headers: { Authorization: `Bearer ${token}` }
@@ -164,18 +167,17 @@ function ChatContent() {
             unreadCount: 0,
             isTemp: true
           };
-          conversationList.unshift(newChat);
-          if (!activeChat) setActiveChat(newChat);
+          setChats(prev => [newChat, ...prev]);
+          setActiveChat(newChat);
         } catch (e) {
           console.error('Failed to fetch seller name:', e);
         }
       } else if (existingProductChat) {
-        if (!activeChat) setActiveChat(existingProductChat);
+        console.log('--- OPENING EXISTING CHAT ---', existingProductChat);
+        setActiveChat(existingProductChat);
       } else if (!activeChat && conversationList.length > 0) {
         setActiveChat(conversationList[0]);
       }
-
-      setChats(conversationList);
     } catch (err) {
       setErrorMsg('Failed to load chats.');
       console.error('Failed to load chats:', err);
@@ -415,13 +417,14 @@ function ChatContent() {
                       const parts = content.split(':');
                       const lId = parts[1];
                       const text = parts.slice(2).join(':');
-
+                      
                       // Auto-fetch if missing
                       if (lId && lId !== 'null' && !productDataCache[lId]) {
                         fetchProductPreview(lId);
                       }
-                      
+
                       const product = productDataCache[lId];
+                      const photoUrl = product?.photos?.[0] || product?.photo || product?.imageUrl;
                       
                       return (
                         <motion.div 
@@ -434,8 +437,8 @@ function ChatContent() {
                              {/* WhatsApp-style Product Header */}
                              <div className={`p-3 flex items-center gap-4 ${isMe ? 'bg-black/20' : 'bg-white/5'} border-b border-white/5`}>
                                 <div className="w-14 h-14 bg-black/40 rounded-lg overflow-hidden flex-shrink-0 border border-white/10 shadow-lg">
-                                   {product?.photos?.[0] ? (
-                                     <img src={formatImageUrl(product.photos[0])} className="w-full h-full object-contain p-1" alt="Product" />
+                                   {photoUrl ? (
+                                     <img src={formatImageUrl(photoUrl)} className="w-full h-full object-contain p-1" alt="Product" />
                                    ) : (
                                      <div className="w-full h-full flex items-center justify-center bg-gray-900/50">
                                        <ImagePlaceholder size={18} className="text-gray-700" />
