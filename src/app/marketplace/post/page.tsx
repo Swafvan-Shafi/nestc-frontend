@@ -15,7 +15,9 @@ export default function PostListingPage() {
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageLink, setImageLink] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [hasUrgent, setHasUrgent] = useState(false);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
   const [formData, setFormData] = useState({
     title: '',
     price: '',
@@ -25,20 +27,44 @@ export default function PostListingPage() {
     description: ''
   });
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // 1. Show local preview instantly
-      const localPreview = URL.createObjectURL(file);
-      setImagePreview(localPreview);
+  useEffect(() => {
+    const checkUrgent = async () => {
+      try {
+        const token = localStorage.getItem('nestc_token');
+        if (!token) return;
+        const savedUser = localStorage.getItem('nestc_user');
+        if (!savedUser) return;
+        const user = JSON.parse(savedUser);
+        
+        const res = await axios.get(`${API_URL}/marketplace/listings`, {
+          params: { sellerId: user.id },
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        const myActiveUrgent = res.data.some((l: any) => l.is_urgent && l.status === 'active');
+        setHasUrgent(myActiveUrgent);
+      } catch (err) {
+        console.error('Failed to check urgent listings', err);
+      }
+    };
+    checkUrgent();
+  }, []);
 
-      // 2. Convert to Base64 so it can be shared with other users
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setImageLink(base64String); // This is the real "shared link"
-      };
-      reader.readAsDataURL(file);
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      if (!selectedFile.type.startsWith('image/')) {
+        setErrorMsg('Please select a valid image file (PNG, JPG, etc).');
+        return;
+      }
+      if (selectedFile.size > 5 * 1024 * 1024) {
+        setErrorMsg('File size must be less than 5MB.');
+        return;
+      }
+      setFile(selectedFile);
+      const localPreview = URL.createObjectURL(selectedFile);
+      setImagePreview(localPreview);
+      setErrorMsg(null);
     }
   };
 
@@ -47,26 +73,32 @@ export default function PostListingPage() {
     setLoading(true);
     setErrorMsg(null);
 
-    if (formData.type === 'Have' && !imageLink) {
-      setErrorMsg('Please wait for the photo to finish processing or upload a photo.');
+    if (formData.type === 'Have' && !file) {
+      setErrorMsg('Please upload a product photo.');
       setLoading(false);
       return;
     }
 
     try {
       const token = localStorage.getItem('nestc_token');
+      
+      const submitData = new FormData();
+      submitData.append('title', formData.title);
+      submitData.append('description', formData.description);
+      submitData.append('category', formData.category);
+      submitData.append('type', formData.type);
+      submitData.append('price', formData.price);
+      submitData.append('is_urgent', String(formData.urgent));
+      submitData.append('is_free', String(parseInt(formData.price) === 0 || 0));
+      if (file) {
+        submitData.append('photo', file);
+      }
 
-      await axios.post('http://127.0.0.1:5000/api/v1/marketplace/listings', {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        type: formData.type,
-        price: parseInt(formData.price) || 0,
-        is_urgent: formData.urgent,
-        is_free: parseInt(formData.price) === 0,
-        photo: imageLink // This now contains the Base64 data visible to everyone
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
+      await axios.post(`${API_URL}/marketplace/listings`, submitData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
       setLoading(false);
@@ -122,16 +154,16 @@ export default function PostListingPage() {
               <button 
                 type="button"
                 onClick={() => setFormData({...formData, type: 'Have'})}
-                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-bold transition-all ${formData.type === 'Have' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-gray-500 hover:text-white'}`}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all text-sm sm:text-base ${formData.type === 'Have' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-gray-500 hover:text-white'}`}
               >
-                Selling an Item
+                Sell item
               </button>
               <button 
                 type="button"
                 onClick={() => setFormData({...formData, type: 'Want'})}
-                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-bold transition-all ${formData.type === 'Want' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'text-gray-500 hover:text-white'}`}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all text-sm sm:text-base ${formData.type === 'Want' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'text-gray-500 hover:text-white'}`}
               >
-                Requesting an Item
+                Request item
               </button>
             </div>
           </div>
@@ -145,7 +177,7 @@ export default function PostListingPage() {
                     <img src={imagePreview} className="max-w-full max-h-[400px] object-contain rounded-xl shadow-2xl" />
                     <button 
                       type="button"
-                      onClick={() => { setImagePreview(null); setImageLink(null); }}
+                      onClick={() => { setImagePreview(null); setFile(null); }}
                       className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-full shadow-lg"
                     >
                       <X size={18} />
@@ -207,7 +239,7 @@ export default function PostListingPage() {
                   <input 
                     required
                     type="text" 
-                    placeholder="0 for Free"
+                    placeholder="200"
                     className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white focus:border-blue-500 transition-colors outline-none"
                     value={formData.price}
                     onChange={(e) => setFormData({...formData, price: e.target.value})}
@@ -216,13 +248,19 @@ export default function PostListingPage() {
               </div>
               
               <div 
-                onClick={() => setFormData({...formData, urgent: !formData.urgent})}
+                onClick={() => {
+                  if (hasUrgent && !formData.urgent) {
+                    setErrorMsg('You already have one urgent listing. Remove it or wait until it expires.');
+                  } else {
+                    setFormData({...formData, urgent: !formData.urgent});
+                  }
+                }}
                 className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer border transition-all ${formData.urgent ? 'bg-red-500/10 border-red-500 text-red-500 shadow-lg shadow-red-500/10' : 'bg-white/5 border-white/10 text-gray-500'}`}
               >
                 <AlertCircle size={24} />
                 <div>
                   <p className="font-bold text-sm">Mark as Urgent</p>
-                  <p className="text-[10px] opacity-60 uppercase tracking-widest">Fast Track Sale</p>
+                  <p className="text-[10px] opacity-60 uppercase tracking-widest">Fast Track Sale (Expires in 24h)</p>
                 </div>
               </div>
             </div>

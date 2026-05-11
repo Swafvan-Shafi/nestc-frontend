@@ -58,7 +58,7 @@ export default function MarketplacePage() {
 
   const filteredListings = listings.filter(listing => 
     listing.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ).sort((a, b) => (b.is_urgent ? 1 : 0) - (a.is_urgent ? 1 : 0));
 
   return (
     <div className="min-h-screen">
@@ -66,15 +66,15 @@ export default function MarketplacePage() {
         title="Marketplace" 
         subtitle="Live Campus Trade" 
         action={
-          <div className="flex items-center gap-3">
-             <Link href="/marketplace/my-listings" className="p-3 bg-white/5 rounded-xl text-gray-400 hover:text-white transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
-                <LayoutGrid size={18} /> My Shop
+          <div className="flex items-center gap-2 sm:gap-3">
+             <Link href="/marketplace/my-listings" className="p-2 sm:p-3 bg-white/5 rounded-xl text-gray-400 hover:text-white transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
+                <LayoutGrid size={18} /> <span className="hidden sm:inline">My Shop</span>
              </Link>
-             <button onClick={fetchListings} className="p-3 bg-white/5 rounded-xl text-gray-500 hover:text-white transition-all">
+             <button onClick={fetchListings} className="p-2 sm:p-3 bg-white/5 rounded-xl text-gray-500 hover:text-white transition-all">
                 <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
              </button>
-             <Link href="/marketplace/post" className="btn-primary flex items-center gap-2 px-6 py-3 text-xs">
-                <Plus size={18} /> Post
+             <Link href="/marketplace/post" className="btn-primary flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 text-xs">
+                <Plus size={18} /> <span className="hidden sm:inline">Post</span>
              </Link>
           </div>
         }
@@ -87,14 +87,14 @@ export default function MarketplacePage() {
             className={`flex-1 md:w-48 flex items-center justify-center gap-3 py-4 rounded-xl font-black uppercase tracking-widest transition-all ${activeMode === 'buy' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/30' : 'text-gray-500 hover:text-white'}`}
           >
             <ShoppingCart size={20} />
-            Buy Items
+            Buy
           </button>
           <button 
             onClick={() => setActiveMode('sell')}
             className={`flex-1 md:w-48 flex items-center justify-center gap-3 py-4 rounded-xl font-black uppercase tracking-widest transition-all ${activeMode === 'sell' ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-600/30' : 'text-gray-500 hover:text-white'}`}
           >
             <DollarSign size={20} />
-            Sell Stuff
+            Sell
           </button>
         </div>
 
@@ -144,8 +144,14 @@ export default function MarketplacePage() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="glass-card group overflow-hidden flex flex-col border-white/5 hover:border-blue-500/30 transition-all"
+                className={`glass-card relative group overflow-hidden flex flex-col transition-all border-white/5 hover:border-blue-500/30 ${listing.is_urgent ? 'ring-1 ring-red-500/50' : ''}`}
               >
+                {listing.is_urgent && (
+                  <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-red-500/90 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-red-500/50 flex items-center gap-1 backdrop-blur-md border border-red-400">
+                    <AlertCircle size={12} />
+                    Urgent · 24h
+                  </div>
+                )}
                 {listing.photos?.[0] && (
                   <div className="relative h-48 bg-white/5 overflow-hidden">
                     <img src={listing.photos[0]} alt={listing.title} className="w-full h-full object-contain p-2" />

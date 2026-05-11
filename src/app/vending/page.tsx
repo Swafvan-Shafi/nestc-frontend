@@ -14,10 +14,10 @@ const allHostels = [
   { id: 'E Hostel', gender: 'male', location: 'Near Warden Office' },
   { id: 'F Hostel', gender: 'male', location: 'Entrance Gate' },
   { id: 'G Hostel', gender: 'male', location: 'Lobby' },
-  { id: 'Mega Hostel Boys', gender: 'male', location: 'Tower 1 Reception' },
+  { id: 'Old Mega', gender: 'male', location: 'Tower 1 Reception' },
   { id: 'LH 1', gender: 'female', location: 'Main Entrance' },
   { id: 'LH 2', gender: 'female', location: 'Dining Hall' },
-  { id: 'Mega Hostel Girls', gender: 'female', location: 'Reception Lobby' },
+  { id: 'MBH2', gender: 'female', location: 'Reception Lobby' },
 ];
 
 const MAX_STOCK = 15;
@@ -52,8 +52,8 @@ export default function VendingPage() {
 
   const currentHostel = allHostels.find(h => h.id === selectedHostelId);
   
-  // Only show items with stock > 0
-  const availableItems = mockItems.filter(item => item.stock > 0);
+  // Show all items to show the empty slots as well
+  const availableItems = mockItems;
 
   return (
     <div className="min-h-screen pb-20 relative">
@@ -156,72 +156,21 @@ export default function VendingPage() {
              <span className="text-xs font-bold text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full">{availableItems.length} Products Available</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
-            {availableItems.map((item, i) => {
-              const stockPercentage = (item.stock / MAX_STOCK) * 100;
-              const stockLevel = item.stock > 10 ? 'full' : item.stock > 5 ? 'low' : 'very-low';
-              
-              const colors = {
-                full: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
-                low: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
-                'very-low': 'text-orange-500 bg-orange-500/10 border-orange-500/20',
-              };
-              const icons = {
-                full: <CheckCircle2 size={16} />,
-                low: <AlertCircle size={16} />,
-                'very-low': <AlertCircle size={16} />,
-              };
-
-              return (
-                <motion.div 
-                  key={item.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="glass-card group relative overflow-hidden flex flex-col h-full border-white/5 hover:border-blue-500/30 transition-all"
-                >
-                  <div className="relative h-56 bg-white/5 overflow-hidden">
-                    <img 
-                      src={item.image} 
-                      alt={item.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80"
-                    />
-                    <div className="absolute top-4 right-4 text-[10px] font-black text-white bg-blue-600 px-3 py-1.5 rounded-lg tracking-widest uppercase shadow-lg">
-                      Slot {item.slot}
-                    </div>
-                  </div>
-
-                  <div className="p-8 flex-1 flex flex-col">
-                    <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">{item.name}</h3>
-                    <p className="text-blue-500 text-3xl font-black mb-8 tracking-tighter">₹{item.price}</p>
-
-                    <div className="space-y-6 mt-auto">
-                      <div>
-                        <div className="flex justify-between text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-3">
-                          <span>Quantity Left</span>
-                          <span>{item.stock} Items</span>
-                        </div>
-                        <div className="w-full bg-white/5 h-2.5 rounded-full overflow-hidden">
-                          <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${stockPercentage}%` }}
-                            className={`h-full rounded-full ${item.stock > 10 ? 'bg-emerald-500' : item.stock > 5 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-between items-center pt-2">
-                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${colors[stockLevel as keyof typeof colors]}`}>
-                          {icons[stockLevel as keyof typeof icons]}
-                          {item.stock} in stock
-                        </div>
-                        <span className="text-[10px] text-gray-600 font-bold uppercase tracking-wider">Refilled {item.lastRefilled}</span>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 pb-20">
+            {mockItems.map((item) => (
+              <div 
+                key={item.id} 
+                className={`glass-card p-4 flex flex-col items-center text-center relative border-white/10 ${item.stock === 0 ? 'opacity-50 grayscale' : 'hover:border-blue-500/30'} transition-all`}
+              >
+                <span className="absolute top-2 left-3 text-[10px] font-black text-gray-500">{item.slot}</span>
+                <img src={item.image} alt={item.name} className="w-16 h-16 object-contain mb-3 mt-4" />
+                <h3 className="text-xs sm:text-sm font-bold text-white leading-tight mb-1">{item.name}</h3>
+                <p className="text-xs text-blue-400 font-black mb-3">₹{item.price}</p>
+                <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider ${item.stock > 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                  {item.stock} left
+                </span>
+              </div>
+            ))}
           </div>
           
           {availableItems.length === 0 && (

@@ -60,6 +60,19 @@ export default function PageHeader({ title, subtitle, action }: PageHeaderProps)
     setUnreadCount(0); 
   };
 
+  const handleBack = () => {
+    if (pathname.startsWith('/chat')) {
+      router.push('/dashboard');
+      return;
+    }
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length > 1) {
+      router.push('/' + parts.slice(0, -1).join('/'));
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
   const showBackButton = pathname !== '/dashboard' && pathname !== '/';
 
   return (
@@ -69,8 +82,9 @@ export default function PageHeader({ title, subtitle, action }: PageHeaderProps)
         <div className="flex items-center gap-4 flex-1 min-w-0">
           {showBackButton && (
             <button 
-              onClick={() => router.back()}
-              className="p-3 bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white rounded-2xl transition-all flex items-center gap-2 group shrink-0"
+              onClick={handleBack}
+              className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-all flex items-center gap-2 group shrink-0 shadow-lg border border-white/10"
+              title="Go Back"
             >
               <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
             </button>

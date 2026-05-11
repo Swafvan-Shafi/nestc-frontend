@@ -312,21 +312,21 @@ ${rejectLink}`
             <form onSubmit={handleRequest} className="space-y-8">
               <div className="group relative">
                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 ml-2">Pickup Point</label>
-                <div className="relative">
-                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-blue-500"><MapPin size={18} /></div>
+                <div className="relative flex flex-col sm:block">
+                  <div className="absolute left-4 sm:left-5 top-[1.5rem] sm:top-1/2 -translate-y-1/2 text-blue-500"><MapPin size={18} /></div>
                   <input 
                     type="text" 
-                    placeholder="Paste Google Maps link or type location..."
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-16 pr-32 py-5 text-white focus:outline-none focus:border-blue-500 transition-all shadow-inner"
+                    placeholder="Paste link or type location..."
+                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-12 sm:pl-16 pr-4 sm:pr-40 py-4 sm:py-5 text-white focus:outline-none focus:border-blue-500 transition-all shadow-inner"
                     value={formData.pickup}
                     onChange={(e) => handlePickupChange(e.target.value)}
                   />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
-                    <button type="button" onClick={() => window.open('https://www.google.com/maps', '_blank')} className="px-4 py-2 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
-                       <ExternalLink size={12} />
+                  <div className="flex sm:absolute sm:right-3 sm:top-1/2 sm:-translate-y-1/2 gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+                    <button type="button" onClick={() => window.open('https://www.google.com/maps', '_blank')} className="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex justify-center items-center">
+                       <ExternalLink size={14} />
                     </button>
-                    <button type="button" onClick={getCurrentLocation} className="px-4 py-2 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
-                      {isLocating ? <Loader2 size={12} className="animate-spin" /> : 'Locate Me'}
+                    <button type="button" onClick={getCurrentLocation} className="flex-[2] sm:flex-none px-4 py-3 sm:py-2 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex justify-center items-center">
+                      {isLocating ? <Loader2 size={14} className="animate-spin" /> : 'Locate Me'}
                     </button>
                   </div>
                 </div>
@@ -347,18 +347,18 @@ ${rejectLink}`
 
               <div className="group relative">
                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 ml-2">Destination</label>
-                <div className="relative">
-                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-emerald-500"><Navigation size={18} /></div>
+                <div className="relative flex flex-col sm:block">
+                  <div className="absolute left-4 sm:left-5 top-[1.5rem] sm:top-1/2 -translate-y-1/2 text-emerald-500"><Navigation size={18} /></div>
                   <input 
                     type="text" 
                     placeholder="Enter destination or pick on map..."
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-16 pr-32 py-5 text-white focus:outline-none focus:border-emerald-500 transition-all shadow-inner"
+                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-12 sm:pl-16 pr-4 sm:pr-32 py-4 sm:py-5 text-white focus:outline-none focus:border-emerald-500 transition-all shadow-inner"
                     value={formData.destination}
                     onChange={(e) => handleDestChange(e.target.value)}
                   />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
-                     <button type="button" onClick={() => setShowMap(!showMap)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showMap ? 'bg-emerald-600 text-white' : 'bg-emerald-600/10 text-emerald-500'}`}>Map</button>
-                     <button type="button" onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(formData.destination)}`)} className="px-4 py-2 bg-white/5 hover:bg-white text-gray-400 hover:text-black rounded-xl text-[10px] font-black transition-all"><Search size={14} /></button>
+                  <div className="flex sm:absolute sm:right-3 sm:top-1/2 sm:-translate-y-1/2 gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+                     <button type="button" onClick={() => setShowMap(!showMap)} className={`flex-[2] sm:flex-none px-4 py-3 sm:py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex justify-center items-center ${showMap ? 'bg-emerald-600 text-white' : 'bg-emerald-600/10 text-emerald-500'}`}>Map</button>
+                     <button type="button" onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(formData.destination)}`)} className="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-white/5 hover:bg-white text-gray-400 hover:text-black rounded-xl text-[10px] font-black transition-all flex justify-center items-center"><Search size={14} /></button>
                   </div>
                 </div>
 
