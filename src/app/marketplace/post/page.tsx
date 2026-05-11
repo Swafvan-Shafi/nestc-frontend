@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Camera, Tag, IndianRupee, MapPin, AlertCircle, CheckCircle2, ChevronDown, Image as ImageIcon, X, Link as LinkIcon } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
 import { BASE_URL } from '@/lib/api';
 
 const API_URL = BASE_URL;
@@ -117,13 +118,15 @@ export default function PostListingPage() {
       router.push(formData.type === 'Have' ? '/marketplace' : '/marketplace/requests');
     } catch (err: any) {
       console.error('Post failed:', err);
+      let msg = 'Network issue. Check your connection.';
       if (err.response) {
-        console.error('Error Response Data:', err.response.data);
-        console.error('Error Status Code:', err.response.status);
+        const status = err.response.status;
+        if (status === 401) msg = 'Please login again.';
+        else if (status === 403) msg = 'You are not allowed to do this.';
+        else if (status === 500) msg = 'Server error. Please try again.';
+        else msg = err.response.data?.error || err.response.data?.details || 'Something went wrong.';
       }
-      const data = err.response?.data;
-      const detailedError = data?.details || data?.error || err.message;
-      setErrorMsg(detailedError);
+      setErrorMsg(msg);
       setLoading(false);
     }
   };

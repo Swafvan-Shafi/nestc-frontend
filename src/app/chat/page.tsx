@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import axios from 'axios';
 import { SOCKET_URL, BASE_URL } from '@/lib/api';
 
 function ChatContent() {
@@ -107,7 +108,8 @@ function ChatContent() {
         listingId: c.listing_id,
         chatSellerId: c.chat_seller_id,
         lastMessage: c.last_message,
-        time: c.last_message_time ? new Date(c.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'
+        time: c.last_message_time ? new Date(c.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now',
+        unreadCount: parseInt(c.unread_count) || 0
       }));
 
       if (sellerId && !conversationList.find((c: any) => c.sellerId === sellerId)) {
@@ -190,8 +192,31 @@ function ChatContent() {
     if (activeChat) {
       fetchMessages(activeChat.id);
       socketRef.current?.emit('join_chat', activeChat.id);
+      
+      // Mark as read
+      if (activeChat.unreadCount > 0) {
+        handleMarkRead(activeChat.id);
+      }
     }
   }, [activeChat?.id]);
+
+  const handleMarkRead = async (chatId: string) => {
+    if (chatId.startsWith('temp_')) return;
+    try {
+      const token = localStorage.getItem('nestc_token');
+      await axios.post(`${BASE_URL}/chat/read/${chatId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Notify socket
+      socketRef.current?.emit('mark_read', { chatId, userId: user?.id });
+      
+      // Update local state
+      setChats(prev => prev.map(c => c.id === chatId ? { ...c, unreadCount: 0 } : c));
+    } catch (e) {
+      console.error('Failed to mark as read:', e);
+    }
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -252,9 +277,16 @@ function ChatContent() {
                 >
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-bold text-white text-sm">{chat.name}</h3>
-                    <span className="text-[10px] text-gray-600 font-bold">{chat.time}</span>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="text-[10px] text-gray-600 font-bold">{chat.time}</span>
+                      {chat.unreadCount > 0 && (
+                        <span className="w-5 h-5 bg-blue-600 text-white text-[10px] font-black flex items-center justify-center rounded-full shadow-lg shadow-blue-600/30">
+                          {chat.unreadCount}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className={`text-xs truncate ${chat.unreadCount > 0 ? 'text-white font-bold' : 'text-gray-500'}`}>
                     {chat.lastMessage?.startsWith('PRODUCT_ENQUIRY:') ? '📦 Product Enquiry' : chat.lastMessage}
                   </p>
                 </div>
@@ -309,26 +341,27 @@ function ChatContent() {
                           key={msg.id || i}
                           className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-4`}
                         >
-                          <div className={`max-w-[85%] rounded-3xl overflow-hidden shadow-2xl flex flex-col ${isMe ? 'bg-blue-600 rounded-tr-none' : 'bg-white/5 border border-white/10 rounded-tl-none'}`}>
-                             <div className={`p-4 flex items-center gap-4 ${isMe ? 'bg-black/10' : 'bg-white/5'}`}>
-                                <div className="w-16 h-16 bg-black/40 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 shadow-lg">
+                          <div className={`max-w-[85%] rounded-2xl overflow-hidden shadow-2xl flex flex-col ${isMe ? 'bg-blue-600 rounded-tr-none' : 'bg-white/5 border border-white/10 rounded-tl-none'}`}>
+                             {/* WhatsApp-style Product Header */}
+                             <div className={`p-3 flex items-center gap-4 ${isMe ? 'bg-black/20' : 'bg-white/5'} border-b border-white/5`}>
+                                <div className="w-14 h-14 bg-black/40 rounded-lg overflow-hidden flex-shrink-0 border border-white/10 shadow-lg">
                                    {product?.photos?.[0] ? (
                                      <img src={product.photos[0]} className="w-full h-full object-contain p-1" alt="Product" />
                                    ) : (
-                                     <div className="w-full h-full flex items-center justify-center"><ImagePlaceholder size={20} className="text-gray-700 animate-pulse" /></div>
+                                     <div className="w-full h-full flex items-center justify-center bg-gray-900/50">
+                                       <ImagePlaceholder size={18} className="text-gray-700" />
+                                     </div>
                                    )}
                                 </div>
-                                <div className="flex-1 min-w-0 pr-2">
-                                   <div className="flex items-center gap-2 mb-0.5">
-                                      <p className={`text-[8px] font-black uppercase tracking-widest ${isMe ? 'text-white/50' : 'text-blue-500/80'}`}>Marketplace Enquiry</p>
-                                   </div>
-                                   <p className="text-sm font-medium text-white leading-tight mb-1">{text}</p>
-                                   <div className="flex items-center gap-2">
-                                      <span className="text-[11px] font-black text-white/90">₹{product?.price || '...'}</span>
-                                      <span className="text-[10px] text-white/40 font-bold">•</span>
-                                      <span className="text-[10px] text-white/60 font-bold truncate">{product?.title || 'Loading...'}</span>
-                                   </div>
+                                <div className="flex-1 min-w-0">
+                                   <p className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isMe ? 'text-white/50' : 'text-blue-500'}`}>Regarding this product</p>
+                                   <p className="text-xs font-bold text-white truncate leading-tight">{product?.title || 'Loading product...'}</p>
+                                   <p className="text-[10px] font-black text-white/90 mt-0.5">₹{product?.price || '...'}</p>
                                 </div>
+                             </div>
+                             {/* Message Content */}
+                             <div className="p-4">
+                                <p className="text-sm font-medium text-white leading-relaxed">{text}</p>
                              </div>
                           </div>
                           <div className="flex items-center gap-2 mt-2 px-3">

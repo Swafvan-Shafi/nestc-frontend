@@ -6,10 +6,11 @@ import { Search, Plus, Clock, Tag, MessageCircle, AlertCircle, ShoppingCart, Dol
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
 import { BASE_URL } from '@/lib/api';
 
 const API_URL = BASE_URL;
-const categories = ['All', 'Books', 'Electronics', 'Stationery', 'Lab', 'Cycles', 'Other'];
+const categories = ['All', 'Books', 'Electronics', 'Stationery', 'Lab', 'Cycles', 'Clothing', 'Other'];
 
 export default function MarketplacePage() {
   const router = useRouter();
@@ -44,6 +45,13 @@ export default function MarketplacePage() {
       setListings(res.data);
     } catch (err: any) {
       console.error('Failed to fetch listings:', err);
+      let msg = 'Network issue. Check your connection.';
+      if (err.response) {
+        const status = err.response.status;
+        if (status === 401) msg = 'Please login again.';
+        else if (status === 500) msg = 'Server error. Please try again.';
+      }
+      // Optional: Add alert or toast for listing fetch failure
     } finally {
       setLoading(false);
     }
@@ -56,7 +64,12 @@ export default function MarketplacePage() {
   const filteredListings = useMemo(() => {
     return listings.filter(listing => {
       const matchesSearch = listing.title.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = activeCategory === 'All' || (listing.category && listing.category.toLowerCase() === activeCategory.toLowerCase());
+      const matchesCategory = activeCategory === 'All' || (() => {
+        const cat = listing.category?.toLowerCase();
+        const active = activeCategory.toLowerCase();
+        if (active === 'clothing' && cat === 'clothes') return true;
+        return cat === active;
+      })();
       const matchesUrgent = !showUrgentOnly || listing.is_urgent;
       return matchesSearch && matchesCategory && matchesUrgent;
     }).sort((a, b) => (b.is_urgent ? 1 : 0) - (a.is_urgent ? 1 : 0));
@@ -193,8 +206,11 @@ export default function MarketplacePage() {
           </AnimatePresence>
           
           {!loading && filteredListings.length === 0 && (
-            <div className="col-span-full py-20 text-center opacity-30">
-              <p className="text-gray-500 font-bold uppercase tracking-widest text-sm">No items found</p>
+            <div className="col-span-full py-32 text-center opacity-30">
+              <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                 <Tag size={32} className="text-gray-600" />
+              </div>
+              <p className="text-gray-500 font-black uppercase tracking-[0.3em] text-sm">No products posted yet.</p>
             </div>
           )}
         </div>

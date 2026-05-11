@@ -5,7 +5,8 @@ import { Bell, Package, ShoppingBag, Car, X, CheckCircle2, AlertCircle, Clock, M
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 
-import { SOCKET_URL } from '@/lib/api';
+import axios from 'axios';
+import { BASE_URL, SOCKET_URL } from '@/lib/api';
 
 export default function NotificationDropdown({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -22,14 +23,46 @@ export default function NotificationDropdown({ isOpen, onClose }: { isOpen: bool
 
     // Listen for new notifications (like messages)
     socket.on('notification', (notif) => {
-      setNotifications(prev => [notif, ...prev]);
-      // Play a subtle sound or trigger a browser notification if needed
+      setNotifications(prev => {
+        // Prevent duplicates
+        if (prev.find(n => n.id === notif.id)) return prev;
+        return [notif, ...prev];
+      });
     });
+
+    fetchUnreadMessages(user.id);
 
     return () => {
       socket.disconnect();
     };
   }, []);
+
+  const fetchUnreadMessages = async (userId: string) => {
+    try {
+      const token = localStorage.getItem('nestc_token');
+      const res = await axios.get(`${BASE_URL}/chat/unread`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const unreadNotifs = res.data.map((m: any) => ({
+        id: m.id,
+        type: 'chat',
+        title: `Message from ${m.sender_name}`,
+        body: m.content.startsWith('PRODUCT_ENQUIRY:') ? `📦 Enquiry: ${m.product_title}` : m.content,
+        time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        read: false,
+        chatId: m.chat_id
+      }));
+
+      setNotifications(prev => {
+        const existingIds = new Set(prev.map(n => n.id));
+        const filtered = unreadNotifs.filter((n: any) => !existingIds.has(n.id));
+        return [...filtered, ...prev];
+      });
+    } catch (e) {
+      console.error('Failed to fetch unread messages:', e);
+    }
+  };
 
   const markAllRead = () => {
     setNotifications(notifications.map(n => ({ ...n, read: true })));

@@ -7,8 +7,9 @@ import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { BASE_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+const API_URL = BASE_URL;
 
 export default function MyListingsPage() {
   const router = useRouter();
