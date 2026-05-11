@@ -95,14 +95,15 @@ function ChatContent() {
         // Handle temp chat migration
         if (currentActive?.isTemp && isFromMe) {
            console.log('Migrating temp chat to real chat:', data.chatId);
-           setActiveChat((prev: any) => ({ ...prev, id: data.chatId, isTemp: false }));
+           const realChat = { ...currentActive, id: data.chatId, isTemp: false };
+           setActiveChat(realChat);
+           activeChatRef.current = realChat; // Update ref immediately
         }
 
-        const isMatch = currentActive && (
-          data.chatId === currentActive.id || 
-          data.message.chat_id === currentActive.id || 
-          (currentActive.isTemp && isFromMe)
-        );
+        const isMatch = (activeChatRef.current && (
+          data.chatId === activeChatRef.current.id || 
+          data.message.chat_id === activeChatRef.current.id
+        )) || (currentActive?.isTemp && isFromMe);
 
         if (isMatch) {
           setMessages((prev) => {
@@ -424,27 +425,27 @@ function ChatContent() {
                       }
 
                       const product = productDataCache[lId];
-                      const photoUrl = product?.photos?.[0] || product?.photo || product?.imageUrl;
+                      const photoUrl = product?.photos?.[0] || product?.photo || product?.imageUrl || product?.photo_url;
                       
                       return (
                         <motion.div 
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          key={msg.id || i}
-                          className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-4`}
+                          key={msg.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-4`}
                         >
-                          <div className={`max-w-[85%] rounded-2xl overflow-hidden shadow-2xl flex flex-col ${isMe ? 'bg-blue-600 rounded-tr-none' : 'bg-white/5 border border-white/10 rounded-tl-none'}`}>
+                          <div className={`max-w-[85%] sm:max-w-[70%] rounded-2xl overflow-hidden shadow-xl ${isMe ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white' : 'bg-white/10 text-white border border-white/10'}`}>
                              {/* WhatsApp-style Product Header */}
                              <div className={`p-3 flex items-center gap-4 ${isMe ? 'bg-black/20' : 'bg-white/5'} border-b border-white/5`}>
-                                <div className="w-14 h-14 bg-black/40 rounded-lg overflow-hidden flex-shrink-0 border border-white/10 shadow-lg">
-                                   {photoUrl ? (
-                                     <img src={formatImageUrl(photoUrl)} className="w-full h-full object-contain p-1" alt="Product" />
-                                   ) : (
-                                     <div className="w-full h-full flex items-center justify-center bg-gray-900/50">
-                                       <ImagePlaceholder size={18} className="text-gray-700" />
-                                     </div>
-                                   )}
-                                </div>
+                                 <div className="w-14 h-14 bg-black/40 rounded-lg overflow-hidden flex-shrink-0 border border-white/10 shadow-lg">
+                                    {photoUrl ? (
+                                      <img src={formatImageUrl(photoUrl)} className="w-full h-full object-contain p-1" alt="Product" />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center bg-gray-900/50">
+                                        {product ? <ImagePlaceholder size={18} className="text-gray-700" /> : <div className="animate-pulse w-4 h-4 bg-gray-600 rounded-full" />}
+                                      </div>
+                                    )}
+                                 </div>
                                 <div className="flex-1 min-w-0">
                                    <p className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isMe ? 'text-white/50' : 'text-blue-500'}`}>Regarding this product</p>
                                    <p className="text-xs font-bold text-white truncate leading-tight">{product?.title || 'Loading product...'}</p>
