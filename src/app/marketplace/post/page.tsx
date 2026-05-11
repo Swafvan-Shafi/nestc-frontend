@@ -12,6 +12,7 @@ const categories = ['Books', 'Electronics', 'Cycles', 'Stationery', 'Lab', 'Clot
 export default function PostListingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState('Finish & Post Listing');
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -82,26 +83,42 @@ export default function PostListingPage() {
     try {
       const token = localStorage.getItem('nestc_token');
       
-      const submitData = new FormData();
-      submitData.append('title', formData.title);
-      submitData.append('description', formData.description);
-      submitData.append('category', formData.category);
-      submitData.append('type', formData.type);
-      submitData.append('price', formData.price);
-      submitData.append('is_urgent', String(formData.urgent));
-      submitData.append('is_free', String(parseInt(formData.price) === 0 || 0));
+      let uploadedImageUrl = null;
       if (file) {
-        submitData.append('photo', file);
+        setLoadingText('Uploading image...');
+        const uploadData = new FormData();
+        uploadData.append('image', file);
+        
+        const uploadRes = await axios.post(`${API_URL}/upload`, uploadData, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        uploadedImageUrl = uploadRes.data.imageUrl;
       }
+
+      setLoadingText('Posting listing...');
+      const submitData = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        type: formData.type,
+        price: formData.price,
+        is_urgent: formData.urgent,
+        is_free: parseInt(formData.price) === 0 || 0,
+        imageUrl: uploadedImageUrl
+      };
 
       await axios.post(`${API_URL}/marketplace/listings`, submitData, {
         headers: { 
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'application/json'
         }
       });
 
       setLoading(false);
+      setLoadingText('Finish & Post Listing');
       setSuccess(true);
       setTimeout(() => router.push(formData.type === 'Have' ? '/marketplace' : '/marketplace/requests'), 2000);
     } catch (err: any) {
@@ -110,6 +127,7 @@ export default function PostListingPage() {
       const detailedError = data?.details || data?.error || err.message;
       setErrorMsg(detailedError);
       setLoading(false);
+      setLoadingText('Finish & Post Listing');
     }
   };
 
@@ -297,7 +315,7 @@ export default function PostListingPage() {
             disabled={loading}
             className="w-full btn-primary py-5 text-lg font-black uppercase tracking-widest shadow-2xl"
           >
-            {loading ? 'Posting to Campus...' : 'Finish & Post Listing'}
+            {loading ? loadingText : 'Finish & Post Listing'}
           </button>
         </form>
       </div>

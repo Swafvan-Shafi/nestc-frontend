@@ -75,8 +75,8 @@ export default function MarketplacePage() {
 
       <div className="max-w-7xl mx-auto px-6 md:px-12 py-12 space-y-12">
 
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-[4]">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
             <input 
               type="text" 
@@ -89,19 +89,24 @@ export default function MarketplacePage() {
           
           <button 
             onClick={() => setShowUrgentOnly(!showUrgentOnly)}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-4 rounded-2xl border font-bold transition-all whitespace-nowrap ${showUrgentOnly ? 'bg-red-500/10 border-red-500 text-red-500 shadow-lg shadow-red-500/10' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
+            title="Filter by Urgent"
+            className={`p-4 rounded-2xl border transition-all flex items-center justify-center shrink-0 ${showUrgentOnly ? 'bg-red-500/10 border-red-500 text-red-500 shadow-lg shadow-red-500/10' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
           >
-            <AlertCircle size={18} />
-            <span className="text-xs uppercase tracking-widest">Urgent</span>
+            <AlertCircle size={20} />
           </button>
+
+          <Link 
+             href="/marketplace/my-listings" 
+             title="Manage My Shop"
+             className="p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-gray-400 hover:text-white transition-all flex items-center justify-center shrink-0 shadow-lg"
+          >
+             <LayoutGrid size={20} />
+          </Link>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <Link href="/marketplace/requests" className="flex-1 p-4 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 rounded-2xl text-emerald-500 transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/5">
+        <div className="flex mb-6">
+          <Link href="/marketplace/requests" className="w-full p-4 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 rounded-2xl text-emerald-500 transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/5">
              <Tag size={18} /> View Request List
-          </Link>
-          <Link href="/marketplace/my-listings" className="flex-1 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-gray-400 hover:text-white transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs shadow-lg">
-             <LayoutGrid size={18} /> Manage My Shop
           </Link>
         </div>
 
