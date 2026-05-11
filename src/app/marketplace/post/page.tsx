@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Camera, Tag, IndianRupee, MapPin, AlertCircle, CheckCircle2, ChevronDown, Image as ImageIcon, X, Link as LinkIcon } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
