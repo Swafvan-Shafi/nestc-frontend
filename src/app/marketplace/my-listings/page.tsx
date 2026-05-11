@@ -191,17 +191,6 @@ export default function MyListingsPage() {
                           {actionLoading === listing.id ? <span className="text-[10px] font-black uppercase tracking-widest ml-1">Deleting...</span> : (isCompleted ? <span className="text-[10px] font-black uppercase tracking-widest ml-1">Remove</span> : null)}
                         </button>
                       </div>
-                      
-                      {!isCompleted && (
-                        <div className="mt-2">
-                           <Link 
-                             href={`/marketplace/edit/${listing.id}`}
-                             className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 text-gray-400 rounded-xl hover:bg-white/10 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
-                           >
-                             Edit Listing
-                           </Link>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </motion.div>
