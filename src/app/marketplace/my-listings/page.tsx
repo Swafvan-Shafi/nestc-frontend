@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, CheckCircle, Clock, Tag, MessageCircle, AlertCircle, ShoppingCart, DollarSign, User, RefreshCw, LayoutGrid, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Trash2, CheckCircle, Clock, Tag, MessageCircle, AlertCircle, ShoppingCart, DollarSign, User, RefreshCw, LayoutGrid, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import { useRouter } from 'next/navigation';
@@ -85,12 +85,8 @@ export default function MyListingsPage() {
       />
 
       <div className="max-w-7xl mx-auto px-6 md:px-12 py-12 space-y-12">
-        
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
            <div className="flex items-center gap-4">
-              <Link href="/marketplace" className="p-3 bg-white/5 rounded-2xl text-gray-400 hover:text-white transition-all">
-                 <ArrowLeft size={20} />
-              </Link>
               <div>
                 <h2 className="text-xl font-bold text-white tracking-tight">Active & Past Items</h2>
                 <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.2em]">Inventory Management</p>
