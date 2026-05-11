@@ -215,63 +215,80 @@ function ChatContent() {
   };
 
   const fetchMessages = async (chatId: string) => {
-    if (chatId.startsWith('temp_')) {
-      setMessages([]);
-      return;
-    }
     try {
       const token = localStorage.getItem('nestc_token');
       const res = await axios.get(`${BASE_URL}/chat/messages/${chatId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('[CHAT DEBUG] Messages fetched:', res.data);
-      setMessages(Array.isArray(res.data) ? res.data : []);
+      const fetchedMessages = Array.isArray(res.data) ? res.data : [];
+      setMessages(fetchedMessages);
     } catch (err: any) {
       console.error('Fetch messages failed:', err);
-      setErrorMsg('Could not load chat history.');
+      // Don't show error for temp/new chats
+      if (!chatId.startsWith('temp_')) {
+        setErrorMsg('Could not load chat history.');
+      }
     }
   };
 
   useEffect(() => {
-    // Aggressive Auto-Enquiry: Send if urlListingId is present, even if chat is NOT temp
+    // If we have a listingId in URL, pre-populate the cache if we can
+    if (urlListingId && !productDataCache[urlListingId]) {
+      fetchProductPreview(urlListingId);
+    }
+  }, [urlListingId]);
+
+  useEffect(() => {
+    // Aggressive Auto-Enquiry
     if (activeChat && urlListingId && isSocketReady && hasSentAutoEnquiry.current !== urlListingId) {
       sendAutoEnquiry();
     }
   }, [activeChat?.id, urlListingId, isSocketReady]);
 
   const sendAutoEnquiry = async () => {
-    if (!urlListingId || !activeChat) return;
+    if (!urlListingId || !activeChat || !user) return;
     try {
-      // PRE-FETCH for the sender
-      fetchProductPreview(urlListingId);
+      const content = `PRODUCT_ENQUIRY:${urlListingId}:Hi, I'm interested in this product. Is it still available?`;
+      
+      // Optimistic update for the enquiry
+      const tempMsg = {
+        id: 'temp_enquiry_' + Date.now(),
+        chat_id: activeChat.id,
+        sender_id: user.id,
+        content: content,
+        created_at: new Date().toISOString(),
+        is_sending: true
+      };
+      setMessages(prev => [...prev, tempMsg]);
 
       socketRef.current?.emit('send_message', {
         chatId: activeChat.id,
         senderId: user.id,
         receiverId: activeChat.sellerId,
-        content: `PRODUCT_ENQUIRY:${urlListingId}:Hi, I'm interested in this product. Is it still available?`,
+        content: content,
         listingId: urlListingId
       });
 
       hasSentAutoEnquiry.current = urlListingId;
       setActiveChat((prev: any) => ({ ...prev, isTemp: false }));
     } catch (e) {
-      setErrorMsg('Auto-enquiry could not be sent.');
       console.error('Failed to send auto-enquiry:', e);
     }
   };
 
   useEffect(() => {
-    if (activeChat) {
+    if (activeChat && !activeChat.isTemp) {
+      // Only fetch history if we don't have it or if we switched to a different REAL chat
+      // This prevents the "disappearing message" race condition
       fetchMessages(activeChat.id);
       socketRef.current?.emit('join_chat', activeChat.id);
       
-      // Mark as read
       if (activeChat.unreadCount > 0) {
         handleMarkRead(activeChat.id);
       }
     }
-  }, [activeChat?.id]);
+  }, [activeChat?.id, activeChat?.isTemp]);
 
   const handleMarkRead = async (chatId: string) => {
     if (chatId.startsWith('temp_')) return;
@@ -298,19 +315,36 @@ function ChatContent() {
   const handleSend = () => {
     if (!message.trim() || !activeChat || !user) return;
 
+    const content = message.trim();
+    const tempId = 'temp_msg_' + Date.now();
+    
+    // Optimistic Update
+    const tempMsg = {
+      id: tempId,
+      chat_id: activeChat.id,
+      sender_id: user.id,
+      content: content,
+      created_at: new Date().toISOString(),
+      is_sending: true
+    };
+    
+    setMessages(prev => [...prev, tempMsg]);
+    setMessage('');
+
     try {
       const messageData = {
         chatId: activeChat.id,
         senderId: user.id,
         receiverId: activeChat.sellerId || activeChat.chatSellerId,
-        content: message.trim(),
+        content: content,
         listingId: activeChat.listingId || activeChat.listing_id
       };
 
       socketRef.current?.emit('send_message', messageData);
-      setMessage('');
     } catch (err) {
       setErrorMsg('Message not sent. Try again.');
+      // Remove failed message
+      setMessages(prev => prev.filter(m => m.id !== tempId));
     }
   };
 
@@ -453,14 +487,13 @@ function ChatContent() {
                       }
 
                       const product = productDataCache[lId];
-                      // Exhaustive check for image properties
-                      const photoUrl = product?.photos?.[0]?.photo_url || 
+                      // Super-robust image detection
+                      const photoUrl = product?.photo_url || 
+                                       product?.photos?.[0]?.photo_url || 
                                        product?.photos?.[0] || 
                                        product?.photo || 
                                        product?.imageUrl || 
-                                       product?.photo_url || 
-                                       product?.image_url || 
-                                       product?.photoUrl;
+                                       product?.image_url;
                       
                       return (
                         <motion.div 
