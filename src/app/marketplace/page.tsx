@@ -127,7 +127,7 @@ export default function MarketplacePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 pb-20">
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence mode="wait">
             {loading ? (
                Array.from({ length: 4 }).map((_, i) => (
                  <div key={i} className="glass-card h-[400px] animate-pulse" />
