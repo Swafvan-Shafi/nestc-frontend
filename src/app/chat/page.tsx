@@ -82,7 +82,7 @@ function ChatContent() {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      const list = res.data.map((c: any) => ({
+      let list = res.data.map((c: any) => ({
         id: c.id,
         name: c.other_user_name || 'Student',
         sellerId: c.other_user_id,
@@ -93,39 +93,34 @@ function ChatContent() {
         unreadCount: parseInt(c.unread_count) || 0,
         isTemp: false
       }));
-      
-      setChats(list);
 
-      // Link handle existing product chat
-      const existing = list.find((c: any) => 
-        (c.sellerId === sellerId || c.chatSellerId === sellerId) && c.listingId === urlListingId
-      );
-
-      if (sellerId && urlListingId && !existing) {
-        // Create DETERMINISTIC ID for instant loading
+      // BRUTE FORCE: If we have a pending new chat, inject it into the list
+      if (sellerId && urlListingId) {
         const ids = [userId, sellerId].sort();
         const baseId = `p2p_${ids[0].substring(0, 8)}_${ids[1].substring(0, 8)}`;
         const detId = `${baseId}_${urlListingId.substring(0, 8)}`;
-
-        const newChat = {
-          id: detId,
-          name: 'Loading Student...',
-          sellerId: sellerId,
-          listingId: urlListingId,
-          isTemp: true,
-          time: 'Now'
-        };
-        setActiveChat(newChat);
-
-        // Fetch seller info
-        axios.get(`${BASE_URL}/auth/users/${sellerId}`, {
-           headers: { Authorization: `Bearer ${token}` }
-        }).then(res => {
-           setActiveChat((prev: any) => prev?.id === detId ? { ...prev, name: res.data.name } : prev);
-        });
-      } else if (existing) {
-        setActiveChat(existing);
+        
+        const exists = list.find((c: any) => c.id === detId);
+        if (!exists) {
+          const newEntry = {
+            id: detId,
+            name: urlTitle || 'New Conversation',
+            sellerId: sellerId,
+            listingId: urlListingId,
+            isTemp: true,
+            time: 'Now',
+            lastMessage: 'Starting trade...'
+          };
+          list = [newEntry, ...list];
+          setActiveChat(newEntry);
+        } else if (!activeChat) {
+          setActiveChat(exists);
+        }
+      } else if (!activeChat && list.length > 0) {
+        setActiveChat(list[0]);
       }
+      
+      setChats(list);
     } catch (err) {
       console.error('Failed to load conversations:', err);
     } finally {
