@@ -37,19 +37,27 @@ function ChatContent() {
   }, [activeChat]);
 
   const fetchProductPreview = useCallback(async (lId: string) => {
-    if (!lId || lId === 'null') return;
+    if (!lId || lId === 'null' || lId === 'undefined') return;
     if (productDataCache[lId]) return;
     
     try {
+      console.log('Fetching product preview for:', lId);
       const token = localStorage.getItem('nestc_token');
       const res = await axios.get(`${BASE_URL}/marketplace/listings/${lId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('Product preview fetched:', res.data);
       setProductDataCache(prev => ({ ...prev, [lId]: res.data }));
     } catch (e) {
-      console.error('Failed to fetch product preview:', e);
+      console.error('Failed to fetch product preview for:', lId, e);
     }
   }, [productDataCache]);
+
+  const formatImageUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${BASE_URL.replace('/api/v1', '')}${url}`;
+  };
 
   useEffect(() => {
     messages.forEach(msg => {
@@ -245,6 +253,17 @@ function ChatContent() {
     }
   };
 
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
+
+  useEffect(() => {
+    if (activeChat) setMobileView('chat');
+  }, [activeChat?.id]);
+
+  const handleBackToList = () => {
+    setMobileView('list');
+    setActiveChat(null);
+  };
+
   const handleMarkSoldShortcut = async () => {
     if (!activeChat?.listingId) return;
     if (!confirm('Mark this product as SOLD and close the deal?')) return;
@@ -285,10 +304,10 @@ function ChatContent() {
             )}
           </AnimatePresence>
 
-        <div className="h-[calc(100vh-250px)] flex gap-8">
+        <div className="h-[calc(100vh-250px)] flex flex-col lg:flex-row gap-8">
 
           {/* Chat List */}
-          <div className="w-80 flex flex-col gap-4">
+          <div className={`w-full lg:w-80 flex flex-col gap-4 ${mobileView === 'chat' ? 'hidden lg:flex' : 'flex'}`}>
              <div className="flex justify-between items-center px-2">
                 <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest">Recent Chats</h2>
              </div>
@@ -319,13 +338,23 @@ function ChatContent() {
           </div>
 
           {/* Chat Window */}
-          <div className="flex-1 glass-card flex flex-col overflow-hidden border-white/5 bg-white/[0.01]">
+          <div className={`flex-1 glass-card flex flex-col overflow-hidden border-white/5 bg-white/[0.01] ${mobileView === 'list' ? 'hidden lg:flex' : 'flex'}`}>
             {activeChat ? (
               <>
-                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02] backdrop-blur-md">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-600/10 text-blue-500 flex items-center justify-center border border-blue-500/20">
-                      <User size={24} />
+                <div className="p-4 lg:p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02] backdrop-blur-md">
+                  <div className="flex items-center gap-3 lg:gap-4">
+                    {/* Back Button for Mobile */}
+                    <button 
+                      type="button"
+                      onClick={handleBackToList}
+                      className="lg:hidden p-2 -ml-2 text-gray-400 hover:text-white"
+                    >
+                      <ExternalLink size={20} className="rotate-180" />
+                    </button>
+                    
+                    <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-blue-600/10 text-blue-500 flex items-center justify-center border border-blue-500/20">
+                      <User size={20} className="lg:hidden" />
+                      <User size={24} className="hidden lg:block" />
                     </div>
                     <div>
                       <h2 className="font-bold text-white tracking-tight">{activeChat.name}</h2>
@@ -370,7 +399,7 @@ function ChatContent() {
                              <div className={`p-3 flex items-center gap-4 ${isMe ? 'bg-black/20' : 'bg-white/5'} border-b border-white/5`}>
                                 <div className="w-14 h-14 bg-black/40 rounded-lg overflow-hidden flex-shrink-0 border border-white/10 shadow-lg">
                                    {product?.photos?.[0] ? (
-                                     <img src={product.photos[0]} className="w-full h-full object-contain p-1" alt="Product" />
+                                     <img src={formatImageUrl(product.photos[0])} className="w-full h-full object-contain p-1" alt="Product" />
                                    ) : (
                                      <div className="w-full h-full flex items-center justify-center bg-gray-900/50">
                                        <ImagePlaceholder size={18} className="text-gray-700" />
