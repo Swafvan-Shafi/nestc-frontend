@@ -119,7 +119,7 @@ export default function MyListingsPage() {
                Array.from({ length: 3 }).map((_, i) => (
                  <div key={i} className="glass-card h-[250px] animate-pulse" />
                ))
-            ).filter(l => {
+            ) : listings.filter(l => {
               if (activeTab === 'selling') return l.type === 'have' && l.status === 'active';
               if (activeTab === 'requested') return l.type === 'want' && l.status === 'active';
               if (activeTab === 'past') return ['sold', 'purchased', 'traded'].includes(l.status);
