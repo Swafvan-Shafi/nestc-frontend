@@ -1,8 +1,8 @@
 'use client';
 
 import PageHeader from '@/components/PageHeader';
-import { motion } from 'framer-motion';
-import { MessageSquare, Send, User, Clock, Check, Loader2, ImageIcon, CheckCircle, Tag, ShoppingBag, ExternalLink, Image as ImagePlaceholder } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageSquare, Send, User, Clock, Check, Loader2, ImageIcon, CheckCircle, Tag, ShoppingBag, ExternalLink, Image as ImagePlaceholder, AlertCircle, X } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSearchParams, useRouter } from 'next/navigation';
