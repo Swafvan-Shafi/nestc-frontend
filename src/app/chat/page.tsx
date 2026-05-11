@@ -240,7 +240,7 @@ function ChatContent() {
                       <h2 className="font-bold text-white leading-tight text-sm md:text-base">{activeChat.name}</h2>
                       <div className="flex items-center gap-2">
                         <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
-                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{isConnected ? 'Online' : 'Connecting...'}</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{isConnected ? 'Online' : 'Offline'}</span>
                       </div>
                     </div>
                   </div>
@@ -258,7 +258,13 @@ function ChatContent() {
                       const text = parts.slice(2).join(':');
                       if (lId && !productDataCache[lId]) fetchProductPreview(lId);
                       const product = productDataCache[lId];
-                      const photoUrl = product?.photo_url || product?.photos?.[0] || product?.imageUrl || product?.photo;
+                      
+                      // Fix: Check product.data if wrapped, and check multiple image fields
+                      const actualProduct = product?.data || product;
+                      const photoUrl = actualProduct?.photo_url || 
+                                       (Array.isArray(actualProduct?.photos) ? actualProduct.photos[0] : actualProduct?.photos) || 
+                                       actualProduct?.imageUrl || 
+                                       actualProduct?.photo;
 
                       return (
                         <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
@@ -277,8 +283,8 @@ function ChatContent() {
                               </div>
                               <div className="min-w-0">
                                 <p className="text-[8px] font-black uppercase text-blue-400 mb-1 tracking-widest">Trade Inquiry</p>
-                                <p className="text-sm font-bold text-white truncate">{product?.title || 'Loading Product...'}</p>
-                                <p className="text-xs font-black text-white/70">₹{product?.price || '...'}</p>
+                                <p className="text-sm font-bold text-white truncate">{actualProduct?.title || 'Loading Product...'}</p>
+                                <p className="text-xs font-black text-white/70">₹{actualProduct?.price || '...'}</p>
                               </div>
                             </div>
                             <div className="p-4 md:p-5 text-sm text-white leading-relaxed">{text}</div>
