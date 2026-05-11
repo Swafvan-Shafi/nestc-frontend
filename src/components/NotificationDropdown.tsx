@@ -5,7 +5,7 @@ import { Bell, Package, ShoppingBag, Car, X, CheckCircle2, AlertCircle, Clock, M
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = 'http://localhost:5000';
+import { SOCKET_URL } from '@/lib/api';
 
 export default function NotificationDropdown({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [notifications, setNotifications] = useState<any[]>([]);

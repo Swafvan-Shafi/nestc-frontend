@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import NotificationDropdown from './NotificationDropdown';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = 'http://localhost:5000';
+import { SOCKET_URL } from '@/lib/api';
 
 interface PageHeaderProps {
   title: string;
@@ -82,6 +82,7 @@ export default function PageHeader({ title, subtitle, action }: PageHeaderProps)
         <div className="flex items-center gap-4 flex-1 min-w-0">
           {showBackButton && (
             <button 
+              type="button"
               onClick={handleBack}
               className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-all flex items-center gap-2 group shrink-0 shadow-lg border border-white/10"
               title="Go Back"
@@ -91,6 +92,7 @@ export default function PageHeader({ title, subtitle, action }: PageHeaderProps)
           )}
 
           <button 
+            type="button"
             onClick={toggleSidebar}
             className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10"
           >
@@ -114,6 +116,7 @@ export default function PageHeader({ title, subtitle, action }: PageHeaderProps)
           
           <div className="flex items-center bg-white/5 p-1.5 rounded-2xl border border-white/5 relative">
             <button 
+              type="button"
               onClick={() => router.push('/chat')}
               className="p-3 text-gray-500 hover:text-white hover:bg-white/5 rounded-xl transition-all hidden xs:block"
             >
@@ -122,6 +125,7 @@ export default function PageHeader({ title, subtitle, action }: PageHeaderProps)
 
             <div className="relative">
               <button 
+                type="button"
                 onClick={handleNotificationClick}
                 className={`p-3 rounded-xl transition-all relative group ${showNotifications ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
               >

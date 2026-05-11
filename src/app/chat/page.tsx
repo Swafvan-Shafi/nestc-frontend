@@ -7,9 +7,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import axios from 'axios';
-
-const SOCKET_URL = 'http://localhost:5000';
+import { SOCKET_URL, BASE_URL } from '@/lib/api';
 
 function ChatContent() {
   const router = useRouter();
@@ -41,7 +39,7 @@ function ChatContent() {
     
     try {
       const token = localStorage.getItem('nestc_token');
-      const res = await axios.get(`${SOCKET_URL}/api/v1/marketplace/listings/${lId}`, {
+      const res = await axios.get(`${BASE_URL}/marketplace/listings/${lId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setProductDataCache(prev => ({ ...prev, [lId]: res.data }));
@@ -98,7 +96,7 @@ function ChatContent() {
   const fetchConversations = async (userId: string) => {
     try {
       const token = localStorage.getItem('nestc_token');
-      const res = await axios.get(`${SOCKET_URL}/api/v1/chat/conversations`, {
+      const res = await axios.get(`${BASE_URL}/chat/conversations`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -113,7 +111,7 @@ function ChatContent() {
       }));
 
       if (sellerId && !conversationList.find((c: any) => c.sellerId === sellerId)) {
-        const sellerRes = await axios.get(`${SOCKET_URL}/api/v1/auth/users/${sellerId}`, {
+        const sellerRes = await axios.get(`${BASE_URL}/auth/users/${sellerId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const seller = sellerRes.data;
@@ -151,7 +149,7 @@ function ChatContent() {
     }
     try {
       const token = localStorage.getItem('nestc_token');
-      const res = await axios.get(`${SOCKET_URL}/api/v1/chat/messages/${chatId}`, {
+      const res = await axios.get(`${BASE_URL}/chat/messages/${chatId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMessages(res.data);
@@ -220,7 +218,7 @@ function ChatContent() {
     
     try {
       const token = localStorage.getItem('nestc_token');
-      await axios.patch(`${SOCKET_URL}/api/v1/marketplace/listings/${activeChat.listingId}/traded`, {}, {
+      await axios.patch(`${BASE_URL}/marketplace/listings/${activeChat.listingId}/traded`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert('Item marked as SOLD successfully!');
@@ -372,6 +370,7 @@ function ChatContent() {
                       className="w-full bg-white/[0.03] border border-white/10 rounded-3xl px-8 py-5 text-white focus:outline-none focus:border-blue-500 transition-all pr-20 shadow-inner group-hover:border-white/20"
                     />
                     <button 
+                      type="button"
                       onClick={handleSend}
                       className="absolute right-3 top-1/2 -translate-y-1/2 p-3.5 bg-blue-600 text-white rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-600/30"
                     >

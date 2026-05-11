@@ -6,9 +6,9 @@ import { Search, Plus, Clock, Tag, MessageCircle, AlertCircle, ShoppingCart, Dol
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import { BASE_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+const API_URL = BASE_URL;
 const categories = ['All', 'Books', 'Electronics', 'Stationery', 'Lab', 'Cycles', 'Other'];
 
 export default function MarketplacePage() {
@@ -91,6 +91,7 @@ export default function MarketplacePage() {
           </div>
           
           <button 
+            type="button"
             onClick={() => setShowUrgentOnly(!showUrgentOnly)}
             title="Filter by Urgent"
             className={`p-4 rounded-2xl border transition-all flex items-center justify-center shrink-0 ${showUrgentOnly ? 'bg-red-500/10 border-red-500 text-red-500 shadow-lg shadow-red-500/10' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
@@ -118,6 +119,7 @@ export default function MarketplacePage() {
           {categories.map((cat) => (
             <button 
               key={cat}
+              type="button"
               onClick={() => setActiveCategory(cat)}
               className={`px-8 py-3 rounded-2xl transition-all whitespace-nowrap text-sm font-bold ${activeCategory === cat ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-gray-500 hover:text-white'}`}
             >
@@ -175,6 +177,7 @@ export default function MarketplacePage() {
                     
                     {currentUser?.id !== listing.seller_id ? (
                       <button 
+                        type="button"
                         onClick={() => router.push(`/chat?sellerId=${listing.seller_id}&listingId=${listing.id}`)}
                         className="p-3 bg-white/5 rounded-xl transition-all hover:bg-blue-600 text-blue-500 hover:text-white"
                       >

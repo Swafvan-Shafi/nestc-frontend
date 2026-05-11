@@ -5,8 +5,9 @@ import { motion } from 'framer-motion';
 import { Camera, Tag, IndianRupee, MapPin, AlertCircle, CheckCircle2, ChevronDown, Image as ImageIcon, X, Link as LinkIcon } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import { BASE_URL } from '@/lib/api';
 
+const API_URL = BASE_URL;
 const categories = ['Books', 'Electronics', 'Cycles', 'Stationery', 'Lab', 'Clothing', 'Other'];
 
 export default function PostListingPage() {
@@ -16,7 +17,6 @@ export default function PostListingPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [hasUrgent, setHasUrgent] = useState(false);
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
   const [formData, setFormData] = useState({
     title: '',
     price: '',

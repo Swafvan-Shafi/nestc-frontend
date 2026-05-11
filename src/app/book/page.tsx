@@ -9,7 +9,9 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { reverseGeocode, getPlacesAutocomplete, getPlaceDetails } from './actions';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+import { BASE_URL } from '@/lib/api';
+
+const API_URL = BASE_URL;
 const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
 
 const VERIFIED_DRIVERS = [
