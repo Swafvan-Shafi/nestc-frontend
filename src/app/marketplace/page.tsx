@@ -56,7 +56,7 @@ export default function MarketplacePage() {
   const filteredListings = useMemo(() => {
     return listings.filter(listing => {
       const matchesSearch = listing.title.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = activeCategory === 'All' || listing.category === activeCategory;
+      const matchesCategory = activeCategory === 'All' || (listing.category && listing.category.toLowerCase() === activeCategory.toLowerCase());
       const matchesUrgent = !showUrgentOnly || listing.is_urgent;
       return matchesSearch && matchesCategory && matchesUrgent;
     }).sort((a, b) => (b.is_urgent ? 1 : 0) - (a.is_urgent ? 1 : 0));
@@ -155,8 +155,11 @@ export default function MarketplacePage() {
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500">{listing.category}</span>
                     <span className="text-[10px] text-gray-500 font-bold flex items-center gap-1"><Clock size={12} /> {new Date(listing.created_at).toLocaleDateString()}</span>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-6 line-clamp-2 leading-tight">{listing.title}</h3>
-                  <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl mb-6">
+                  <h3 className="text-xl font-bold text-white mb-2 line-clamp-2 leading-tight">{listing.title}</h3>
+                  {listing.description && (
+                    <p className="text-xs text-gray-400 mb-6 line-clamp-3 leading-relaxed">{listing.description}</p>
+                  )}
+                  <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl mb-6 mt-auto">
                     <div className="p-2 rounded-lg bg-blue-500/20 text-blue-500"><User size={16} /></div>
                     <div>
                       <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Seller</p>
