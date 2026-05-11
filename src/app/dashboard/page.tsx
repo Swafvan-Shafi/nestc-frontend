@@ -21,23 +21,15 @@ export default function DashboardPage() {
   return (
     <div className="min-h-[100dvh] flex flex-col pb-20 sm:pb-0">
       <PageHeader 
-        title={`Hello, ${displayName.split(' ')[0]}!`}
-        subtitle={`Roll No: ${user?.rollNo || 'B210xxxCS'}`}
+        title="NestC Services"
+        subtitle={`Hello, ${displayName.split(' ')[0]}! • Roll No: ${user?.rollNo || 'B210xxxCS'}`}
       />
 
       <div className="max-w-7xl mx-auto px-4 md:px-12 py-4 sm:py-12 flex-1 flex flex-col justify-center">
         
         {/* Primary Navigation - Large Interactive Cards */}
-        <section className="flex-1 flex flex-col">
-           <div className="flex justify-between items-end border-b border-white/5 pb-4 sm:pb-6 mb-4 sm:mb-8">
-             <div>
-               <h2 className="text-xl sm:text-3xl font-bold text-white tracking-tight mb-1">NestC Services</h2>
-               <p className="text-xs sm:text-sm text-gray-500">Quick access to essential utilities</p>
-             </div>
-             <span className="hidden md:block text-[10px] font-black text-gray-700 uppercase tracking-[0.3em]">Active Portal</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-8 flex-1">
+        <section className="flex-1 flex flex-col justify-center pb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8 flex-1 max-h-[70vh]">
             {[
               { label: "Book a Ride", icon: Car, href: "/book", color: "from-blue-600 to-indigo-600", desc: "Request auto or taxi drivers at the gate" },
               { label: "Vending Stock", icon: Package, href: "/vending", color: "from-emerald-600 to-teal-600", desc: "Real-time stock for hostel machines" },
@@ -72,8 +64,8 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <div className="flex justify-center mt-6">
-          <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/5">
+        <div className="flex justify-center mt-4">
+          <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/5 shadow-lg">
              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
              <span className="text-[9px] sm:text-[10px] text-gray-500 font-black uppercase tracking-widest">All Services Operational</span>
           </div>
