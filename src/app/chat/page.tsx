@@ -86,7 +86,23 @@ function ChatContent() {
 
       socket.on('new_message', (data) => {
         const currentActive = activeChatRef.current;
-        if (currentActive && (data.chatId === currentActive.id || data.message.chat_id === currentActive.id)) {
+        console.log('--- SOCKET: new_message ---', data);
+        
+        const isFromMe = data.message.sender_id === parsedUser.id;
+        
+        // Handle temp chat migration
+        if (currentActive?.isTemp && isFromMe) {
+           console.log('Migrating temp chat to real chat:', data.chatId);
+           setActiveChat((prev: any) => ({ ...prev, id: data.chatId, isTemp: false }));
+        }
+
+        const isMatch = currentActive && (
+          data.chatId === currentActive.id || 
+          data.message.chat_id === currentActive.id || 
+          (currentActive.isTemp && isFromMe)
+        );
+
+        if (isMatch) {
           setMessages((prev) => {
              if (prev.find(m => m.id === data.message.id)) return prev;
              return [...prev, data.message];
@@ -128,17 +144,27 @@ function ChatContent() {
       );
 
       if (sellerId && !existingProductChat) {
-        const newChat = {
-          id: `temp_${sellerId}`,
-          name: sellerId.substring(0, 8), // Placeholder name
-          lastMessage: 'Starting a new conversation...',
-          time: 'Now',
-          sellerId: sellerId,
-          listingId: urlListingId,
-          unreadCount: 0
-        };
-        conversationList.unshift(newChat);
-        if (!activeChat) setActiveChat(newChat);
+        try {
+          const sellerRes = await axios.get(`${BASE_URL}/auth/users/${sellerId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const seller = sellerRes.data;
+          
+          const newChat = {
+            id: `temp_${sellerId}`,
+            name: seller.name,
+            lastMessage: 'Starting a new conversation...',
+            time: 'Now',
+            sellerId: sellerId,
+            listingId: urlListingId,
+            unreadCount: 0,
+            isTemp: true
+          };
+          conversationList.unshift(newChat);
+          if (!activeChat) setActiveChat(newChat);
+        } catch (e) {
+          console.error('Failed to fetch seller name:', e);
+        }
       } else if (existingProductChat) {
         if (!activeChat) setActiveChat(existingProductChat);
       } else if (!activeChat && conversationList.length > 0) {
@@ -385,6 +411,12 @@ function ChatContent() {
                       const parts = content.split(':');
                       const lId = parts[1];
                       const text = parts.slice(2).join(':');
+
+                      // Auto-fetch if missing
+                      if (lId && lId !== 'null' && !productDataCache[lId]) {
+                        fetchProductPreview(lId);
+                      }
+                      
                       const product = productDataCache[lId];
                       
                       return (
