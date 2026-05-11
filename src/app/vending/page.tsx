@@ -46,7 +46,14 @@ export default function VendingPage() {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
       
-      const gender = parsedUser.gender?.toLowerCase();
+      let gender = parsedUser.gender?.toLowerCase();
+      
+      if (!gender && parsedUser.hostel) {
+        const matchingHostel = allHostels.find(h => h.id === parsedUser.hostel || parsedUser.hostel.includes(h.id));
+        if (matchingHostel) gender = matchingHostel.gender;
+        else if (['mlh', 'lh 1', 'lh 2', 'lh 3', 'lh 4'].includes(parsedUser.hostel.toLowerCase())) gender = 'female';
+      }
+
       if (gender === 'male' || gender === 'm') {
         userHostels = allHostels.filter(h => h.gender !== 'female');
       } else if (gender === 'female' || gender === 'f') {
