@@ -15,7 +15,7 @@ export default function MyListingsPage() {
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'active' | 'past'>('active');
+  const [activeTab, setActiveTab] = useState<'selling' | 'requested' | 'past'>('selling');
 
   useEffect(() => {
     const savedUser = localStorage.getItem('nestc_user');
@@ -86,18 +86,24 @@ export default function MyListingsPage() {
       />
 
       <div className="max-w-7xl mx-auto px-6 md:px-12 py-12 space-y-12">
-        <div className="flex border-b border-white/10 mb-8 sticky top-[80px] z-[90] bg-[#0a0a0b]/90 backdrop-blur-md pt-4">
+        <div className="flex border-b border-white/10 mb-8 sticky top-[80px] z-[90] bg-[#0a0a0b]/90 backdrop-blur-md pt-4 overflow-x-auto no-scrollbar">
            <button 
-             onClick={() => setActiveTab('active')}
-             className={`flex-1 pb-4 text-xs sm:text-sm font-black uppercase tracking-widest transition-all ${activeTab === 'active' ? 'border-b-2 border-blue-500 text-blue-500' : 'border-b-2 border-transparent text-gray-500 hover:text-white'}`}
+             onClick={() => setActiveTab('selling')}
+             className={`flex-1 min-w-[120px] pb-4 text-xs sm:text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap px-4 ${activeTab === 'selling' ? 'border-b-2 border-blue-500 text-blue-500' : 'border-b-2 border-transparent text-gray-500 hover:text-white'}`}
            >
-             Active Items ({listings.filter(l => l.status === 'active').length})
+             Selling Items ({listings.filter(l => l.type === 'have' && l.status === 'active').length})
+           </button>
+           <button 
+             onClick={() => setActiveTab('requested')}
+             className={`flex-1 min-w-[120px] pb-4 text-xs sm:text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap px-4 ${activeTab === 'requested' ? 'border-b-2 border-emerald-500 text-emerald-500' : 'border-b-2 border-transparent text-gray-500 hover:text-white'}`}
+           >
+             Requested Items ({listings.filter(l => l.type === 'want').length})
            </button>
            <button 
              onClick={() => setActiveTab('past')}
-             className={`flex-1 pb-4 text-xs sm:text-sm font-black uppercase tracking-widest transition-all ${activeTab === 'past' ? 'border-b-2 border-emerald-500 text-emerald-500' : 'border-b-2 border-transparent text-gray-500 hover:text-white'}`}
+             className={`flex-1 min-w-[120px] pb-4 text-xs sm:text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap px-4 ${activeTab === 'past' ? 'border-b-2 border-gray-400 text-white' : 'border-b-2 border-transparent text-gray-500 hover:text-white'}`}
            >
-             Past Items ({listings.filter(l => l.status === 'traded').length})
+             Past Items ({listings.filter(l => l.type === 'have' && l.status === 'traded').length})
            </button>
         </div>
 
@@ -107,7 +113,12 @@ export default function MyListingsPage() {
                Array.from({ length: 3 }).map((_, i) => (
                  <div key={i} className="glass-card h-[250px] animate-pulse" />
                ))
-            ) : listings.filter(l => (activeTab === 'active' ? l.status === 'active' : l.status === 'traded')).map((listing) => {
+            ) : listings.filter(l => {
+              if (activeTab === 'selling') return l.type === 'have' && l.status === 'active';
+              if (activeTab === 'requested') return l.type === 'want';
+              if (activeTab === 'past') return l.type === 'have' && l.status === 'traded';
+              return false;
+            }).map((listing) => {
               const isSold = listing.status === 'traded';
               return (
                 <motion.div 
@@ -119,18 +130,20 @@ export default function MyListingsPage() {
                   className={`glass-card overflow-hidden flex flex-col border-white/5 transition-all ${isSold ? 'opacity-60 grayscale-[0.5]' : 'hover:border-blue-500/30'}`}
                 >
                   <div className="flex gap-6 p-6">
-                    <div className="relative w-32 h-32 bg-white/5 rounded-2xl overflow-hidden shrink-0">
-                      {listing.photos?.[0] ? (
-                        <img src={listing.photos[0]} alt={listing.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-700 font-black text-xs uppercase tracking-widest text-center px-2">No Photo</div>
-                      )}
-                      {isSold && (
-                        <div className="absolute inset-0 bg-emerald-600/80 backdrop-blur-sm flex items-center justify-center">
-                           <span className="text-white font-black text-[10px] uppercase tracking-[0.3em] rotate-[-15deg] border-2 border-white px-2 py-1">SOLD</span>
-                        </div>
-                      )}
-                    </div>
+                    {listing.type === 'have' && (
+                      <div className="relative w-32 h-32 bg-white/5 rounded-2xl overflow-hidden shrink-0">
+                        {listing.photos?.[0] ? (
+                          <img src={listing.photos[0]} alt={listing.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-700 font-black text-xs uppercase tracking-widest text-center px-2">No Photo</div>
+                        )}
+                        {isSold && (
+                          <div className="absolute inset-0 bg-emerald-600/80 backdrop-blur-sm flex items-center justify-center">
+                             <span className="text-white font-black text-[10px] uppercase tracking-[0.3em] rotate-[-15deg] border-2 border-white px-2 py-1">SOLD</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="flex-1 flex flex-col justify-between min-w-0">
                       <div>
@@ -139,11 +152,13 @@ export default function MyListingsPage() {
                            <span className="text-[10px] text-gray-600 font-bold">{new Date(listing.created_at).toLocaleDateString()}</span>
                         </div>
                         <h3 className="text-lg font-bold text-white truncate leading-tight">{listing.title}</h3>
-                        <p className="text-xl font-black text-white mt-1">₹{listing.price}</p>
+                        <p className="text-xl font-black text-white mt-1">
+                          {listing.price > 0 ? `₹${listing.price}` : (listing.type === 'want' ? 'Budget not specified' : 'Free')}
+                        </p>
                       </div>
 
                       <div className="flex gap-2 mt-4">
-                        {!isSold && (
+                        {listing.type === 'have' && !isSold && (
                           <button 
                             onClick={() => handleMarkSold(listing.id)}
                             className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600/10 text-emerald-500 rounded-xl hover:bg-emerald-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
