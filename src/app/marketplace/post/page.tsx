@@ -12,8 +12,6 @@ const categories = ['Books', 'Electronics', 'Cycles', 'Stationery', 'Lab', 'Clot
 export default function PostListingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState('Finish & Post Listing');
-  const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -85,7 +83,6 @@ export default function PostListingPage() {
       
       let uploadedImageUrl = null;
       if (file) {
-        setLoadingText('Uploading image...');
         const uploadData = new FormData();
         uploadData.append('image', file);
         
@@ -98,7 +95,6 @@ export default function PostListingPage() {
         uploadedImageUrl = uploadRes.data.imageUrl;
       }
 
-      setLoadingText('Posting listing...');
       const submitData = {
         title: formData.title,
         description: formData.description,
@@ -118,49 +114,15 @@ export default function PostListingPage() {
       });
 
       setLoading(false);
-      setLoadingText('Finish & Post Listing');
-      setSuccess(true);
-      setTimeout(() => router.push(formData.type === 'Have' ? '/marketplace' : '/marketplace/requests'), 2000);
+      router.push(formData.type === 'Have' ? '/marketplace' : '/marketplace/requests');
     } catch (err: any) {
       console.error('Post failed:', err);
       const data = err.response?.data;
       const detailedError = data?.details || data?.error || err.message;
       setErrorMsg(detailedError);
       setLoading(false);
-      setLoadingText('Finish & Post Listing');
     }
   };
-
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="glass-card p-12 text-center flex flex-col items-center"
-        >
-          <div className="w-20 h-20 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 size={40} />
-          </div>
-          <h2 className="text-3xl font-bold text-white mb-2">Listing Posted!</h2>
-          <p className="text-gray-500 mb-8">
-            {formData.type === 'Have' 
-              ? 'Your item is now visible to all students on the marketplace.' 
-              : 'Your request has been added to the request list.'}
-          </p>
-          {formData.type === 'Have' ? (
-             <Link href="/marketplace" className="btn-primary w-full py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20">
-               <ShoppingCart size={18} /> Go to Marketplace
-             </Link>
-          ) : (
-             <Link href="/marketplace/requests" className="w-full py-4 bg-emerald-600 text-white font-black uppercase tracking-widest text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20">
-               <Tag size={18} /> View Request List
-             </Link>
-          )}
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen pb-20">
@@ -265,14 +227,14 @@ export default function PostListingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">
-                  {formData.type === 'Have' ? 'Price (₹)' : 'Expected Budget (₹)'}
+                  {formData.type === 'Have' ? 'Price (₹)' : 'Maximum Budget (₹)'}
                 </label>
                 <div className="relative">
                   <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                   <input 
-                    required
+                    required={formData.type === 'Have'}
                     type="text" 
-                    placeholder="200"
+                    placeholder={formData.type === 'Have' ? "200" : "Enter maximum budget"}
                     className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white focus:border-blue-500 transition-colors outline-none"
                     value={formData.price}
                     onChange={(e) => setFormData({...formData, price: e.target.value})}
@@ -298,24 +260,26 @@ export default function PostListingPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">Description</label>
-              <textarea 
-                required
-                rows={4}
-                placeholder={formData.type === 'Have' ? "Describe the condition, age, and any other details..." : "Describe exactly what you are looking for..."}
-                className="w-full bg-white/5 border border-white/10 rounded-3xl p-6 text-white focus:border-blue-500 transition-colors outline-none resize-none"
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-              />
-            </div>
+            {formData.type === 'Have' && (
+              <div>
+                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">Description</label>
+                <textarea 
+                  required
+                  rows={4}
+                  placeholder="Describe the condition, age, and any other details..."
+                  className="w-full bg-white/5 border border-white/10 rounded-3xl p-6 text-white focus:border-blue-500 transition-colors outline-none resize-none"
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                />
+              </div>
+            )}
           </div>
 
           <button 
             disabled={loading}
             className="w-full btn-primary py-5 text-lg font-black uppercase tracking-widest shadow-2xl"
           >
-            {loading ? loadingText : 'Finish & Post Listing'}
+            {loading ? 'Posting...' : 'Post'}
           </button>
         </form>
       </div>

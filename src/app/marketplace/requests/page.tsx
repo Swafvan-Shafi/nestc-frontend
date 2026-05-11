@@ -108,9 +108,7 @@ export default function RequestListPage() {
                     <span className="text-[10px] text-gray-500 font-bold flex items-center gap-1"><Clock size={12} /> {new Date(listing.created_at).toLocaleDateString()}</span>
                   </div>
                   
-                  <h3 className="text-xl font-bold text-white mb-2 line-clamp-2 leading-tight">{listing.title}</h3>
-                  <p className="text-sm text-gray-400 mb-6 line-clamp-3">{listing.description}</p>
-                  
+                  <h3 className="text-xl font-bold text-white mb-6 line-clamp-2 leading-tight">{listing.title}</h3>
                   <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl mb-6">
                     <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-500"><User size={16} /></div>
                     <div>
@@ -124,8 +122,14 @@ export default function RequestListPage() {
                   
                   <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Expected Budget</p>
-                      <span className="text-xl font-black text-white">₹{listing.price}</span>
+                      {listing.price > 0 ? (
+                        <>
+                          <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Max Budget</p>
+                          <span className="text-xl font-black text-white">₹{listing.price}</span>
+                        </>
+                      ) : (
+                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mt-2">Budget not specified</p>
+                      )}
                     </div>
                     
                     {currentUser?.id !== listing.seller_id ? (

@@ -15,6 +15,7 @@ export default function MyListingsPage() {
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'active' | 'past'>('active');
 
   useEffect(() => {
     const savedUser = localStorage.getItem('nestc_user');
@@ -85,22 +86,19 @@ export default function MyListingsPage() {
       />
 
       <div className="max-w-7xl mx-auto px-6 md:px-12 py-12 space-y-12">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-           <div className="flex items-center gap-4">
-              <div>
-                <h2 className="text-xl font-bold text-white tracking-tight">Active & Past Items</h2>
-                <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.2em]">Inventory Management</p>
-              </div>
-           </div>
-           
-           <div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/5">
-              <div className="px-4 py-2 bg-blue-600/10 rounded-xl text-blue-500 text-xs font-black uppercase tracking-widest">
-                 {listings.filter(l => l.status === 'active').length} Active
-              </div>
-              <div className="px-4 py-2 bg-emerald-600/10 rounded-xl text-emerald-500 text-xs font-black uppercase tracking-widest">
-                 {listings.filter(l => l.status === 'traded').length} Sold
-              </div>
-           </div>
+        <div className="flex border-b border-white/10 mb-8 sticky top-[80px] z-[90] bg-[#0a0a0b]/90 backdrop-blur-md pt-4">
+           <button 
+             onClick={() => setActiveTab('active')}
+             className={`flex-1 pb-4 text-xs sm:text-sm font-black uppercase tracking-widest transition-all ${activeTab === 'active' ? 'border-b-2 border-blue-500 text-blue-500' : 'border-b-2 border-transparent text-gray-500 hover:text-white'}`}
+           >
+             Active Items ({listings.filter(l => l.status === 'active').length})
+           </button>
+           <button 
+             onClick={() => setActiveTab('past')}
+             className={`flex-1 pb-4 text-xs sm:text-sm font-black uppercase tracking-widest transition-all ${activeTab === 'past' ? 'border-b-2 border-emerald-500 text-emerald-500' : 'border-b-2 border-transparent text-gray-500 hover:text-white'}`}
+           >
+             Past Items ({listings.filter(l => l.status === 'traded').length})
+           </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
@@ -109,7 +107,7 @@ export default function MyListingsPage() {
                Array.from({ length: 3 }).map((_, i) => (
                  <div key={i} className="glass-card h-[250px] animate-pulse" />
                ))
-            ) : listings.map((listing) => {
+            ) : listings.filter(l => (activeTab === 'active' ? l.status === 'active' : l.status === 'traded')).map((listing) => {
               const isSold = listing.status === 'traded';
               return (
                 <motion.div 
