@@ -36,22 +36,35 @@ function ChatContent() {
     activeChatRef.current = activeChat;
   }, [activeChat]);
 
+  const [isConnected, setIsConnected] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const fetchProductPreview = useCallback(async (lId: string) => {
     if (!lId || lId === 'null' || lId === 'undefined') return;
     if (productDataCache[lId]) return;
     
     try {
-      console.log('Fetching product preview for:', lId);
+      console.log('[CHAT DEBUG] Fetching product preview for:', lId);
       const token = localStorage.getItem('nestc_token');
       const res = await axios.get(`${BASE_URL}/marketplace/listings/${lId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      console.log('Product preview fetched:', res.data);
+      console.log('[CHAT DEBUG] Product preview fetched:', res.data);
       setProductDataCache(prev => ({ ...prev, [lId]: res.data }));
     } catch (e) {
-      console.error('Failed to fetch product preview for:', lId, e);
+      console.error('[CHAT DEBUG] Failed to fetch product preview for:', lId, e);
     }
   }, [productDataCache]);
+
+  const handleRefresh = async () => {
+    if (!user?.id) return;
+    setIsRefreshing(true);
+    await fetchConversations(user.id);
+    if (activeChat?.id) {
+      await fetchMessages(activeChat.id);
+    }
+    setIsRefreshing(false);
+  };
 
   const formatImageUrl = (url: string) => {
     if (!url) return '';
@@ -107,9 +120,15 @@ function ChatContent() {
 
         if (isMatch) {
           setMessages((prev) => {
+             // Avoid duplicates
              if (prev.find(m => m.id === data.message.id)) return prev;
              return [...prev, data.message];
           });
+          
+          // Force scroll to bottom
+          setTimeout(() => {
+            scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+          }, 100);
         }
         fetchConversations(parsedUser.id);
       });
@@ -134,7 +153,7 @@ function ChatContent() {
         id: c.id,
         name: c.other_user_name || 'Student',
         sellerId: c.other_user_id,
-        listing_id: c.listing_id,
+        listingId: c.listing_id, // Map snake_case to camelCase
         chatSellerId: c.chat_seller_id,
         lastMessage: c.last_message,
         time: c.last_message_time ? new Date(c.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now',
@@ -147,7 +166,7 @@ function ChatContent() {
 
       // Check for existing chat for this SPECIFIC product
       const existingProductChat = conversationList.find((c: any) => 
-        (c.sellerId === sellerId || c.chatSellerId === sellerId) && c.listing_id === urlListingId
+        (c.sellerId === sellerId || c.chatSellerId === sellerId) && c.listingId === urlListingId
       );
 
       if (sellerId && urlListingId && !existingProductChat) {
@@ -164,7 +183,7 @@ function ChatContent() {
             lastMessage: 'Starting a new conversation...',
             time: 'Now',
             sellerId: sellerId,
-            listingId: urlListingId,
+            listingId: urlListingId, // Use listingId consistently
             unreadCount: 0,
             isTemp: true
           };
@@ -200,7 +219,8 @@ function ChatContent() {
       const res = await axios.get(`${BASE_URL}/chat/messages/${chatId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setMessages(res.data);
+      console.log('[CHAT DEBUG] Messages fetched:', res.data);
+      setMessages(Array.isArray(res.data) ? res.data : []);
     } catch (err: any) {
       console.error('Fetch messages failed:', err);
       setErrorMsg('Could not load chat history.');
@@ -279,7 +299,7 @@ function ChatContent() {
         senderId: user.id,
         receiverId: activeChat.sellerId || activeChat.chatSellerId,
         content: message.trim(),
-        listingId: activeChat.listingId
+        listingId: activeChat.listingId || activeChat.listing_id
       };
 
       socketRef.current?.emit('send_message', messageData);
@@ -428,7 +448,7 @@ function ChatContent() {
                       }
 
                       const product = productDataCache[lId];
-                      const photoUrl = product?.photos?.[0] || product?.photo || product?.imageUrl || product?.photo_url || product?.image_url;
+                      const photoUrl = product?.photos?.[0] || product?.photo || product?.imageUrl || product?.photo_url || product?.image_url || product?.photoUrl;
                       
                       return (
                         <motion.div 
