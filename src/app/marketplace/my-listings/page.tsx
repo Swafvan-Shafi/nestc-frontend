@@ -135,17 +135,17 @@ export default function MyListingsPage() {
                   exit={{ opacity: 0, scale: 0.9 }}
                   className={`glass-card overflow-hidden flex flex-col border-white/5 transition-all ${isCompleted ? 'opacity-60 grayscale-[0.5]' : 'hover:border-blue-500/30'}`}
                 >
-                  <div className="flex gap-6 p-6">
+                  <div className="flex flex-row gap-4 sm:gap-6 p-4 sm:p-6">
                     {listing.type === 'have' && (
-                      <div className="relative w-32 h-32 bg-white/5 rounded-2xl overflow-hidden shrink-0">
+                      <div className="relative w-24 h-24 sm:w-32 sm:h-32 bg-white/5 rounded-xl sm:rounded-2xl overflow-hidden shrink-0 self-start">
                         {listing.photos?.[0] ? (
                           <img src={listing.photos[0]} alt={listing.title} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-700 font-black text-xs uppercase tracking-widest text-center px-2">No Photo</div>
+                          <div className="w-full h-full flex items-center justify-center text-gray-700 font-black text-[10px] sm:text-xs uppercase tracking-widest text-center px-1 sm:px-2">No Photo</div>
                         )}
                         {isCompleted && (
-                          <div className="absolute inset-0 bg-emerald-600/80 backdrop-blur-sm flex items-center justify-center p-2">
-                             <span className="text-white font-black text-[10px] uppercase tracking-[0.2em] border-2 border-white px-2 py-1 bg-[#0a0a0b]/20 text-center">{listing.type === 'have' ? 'SOLD' : 'PURCHASED'}</span>
+                          <div className="absolute inset-0 bg-emerald-600/80 backdrop-blur-sm flex items-center justify-center p-1 sm:p-2">
+                             <span className="text-white font-black text-[8px] sm:text-[10px] uppercase tracking-widest sm:tracking-[0.2em] border-2 border-white px-1 sm:px-2 py-0.5 sm:py-1 bg-[#0a0a0b]/20 text-center">{listing.type === 'have' ? 'SOLD' : 'PURCHASED'}</span>
                           </div>
                         )}
                       </div>
@@ -153,42 +153,60 @@ export default function MyListingsPage() {
 
                     <div className="flex-1 flex flex-col justify-between min-w-0">
                       <div>
-                        <div className="flex justify-between items-start mb-2">
-                           <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">{listing.category}</span>
-                           <span className="text-[10px] text-gray-600 font-bold">{new Date(listing.created_at).toLocaleDateString()}</span>
+                        <div className="flex justify-between items-start mb-1 sm:mb-2">
+                           <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-blue-500 truncate mr-2">{listing.category}</span>
+                           <span className="text-[9px] sm:text-[10px] text-gray-600 font-bold shrink-0">{new Date(listing.created_at).toLocaleDateString()}</span>
                         </div>
-                        <h3 className="text-lg font-bold text-white truncate leading-tight">{listing.title}</h3>
-                        <p className="text-xl font-black text-white mt-1">
+                        <h3 className="text-sm sm:text-lg font-bold text-white truncate leading-tight">{listing.title}</h3>
+                        <p className="text-base sm:text-xl font-black text-white mt-1">
                           {listing.price > 0 ? `₹${listing.price}` : (listing.type === 'want' ? 'Budget not specified' : 'Free')}
                         </p>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                      <div className="flex flex-row items-center gap-1 sm:gap-2 mt-3 sm:mt-4">
                         {listing.type === 'have' && !isCompleted && (
                           <button 
                             disabled={actionLoading !== null}
                             onClick={() => handleUpdateStatus(listing.id, 'sold')}
-                            className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600/10 text-emerald-500 rounded-xl hover:bg-emerald-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                            className="flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 px-1 sm:px-3 bg-emerald-600/10 text-emerald-500 rounded-lg sm:rounded-xl hover:bg-emerald-600 hover:text-white transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
                           >
-                            <CheckCircle size={14} /> {actionLoading === listing.id ? 'Updating...' : 'Mark Sold'}
+                            <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> 
+                            {actionLoading === listing.id ? 'Updating...' : (
+                               <>
+                                 <span className="sm:hidden">Sold</span>
+                                 <span className="hidden sm:inline">Mark Sold</span>
+                               </>
+                            )}
                           </button>
                         )}
                         {listing.type === 'want' && !isCompleted && (
                           <button 
                             disabled={actionLoading !== null}
                             onClick={() => handleUpdateStatus(listing.id, 'purchased')}
-                            className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600/10 text-emerald-500 rounded-xl hover:bg-emerald-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                            className="flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 px-1 sm:px-3 bg-emerald-600/10 text-emerald-500 rounded-lg sm:rounded-xl hover:bg-emerald-600 hover:text-white transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
                           >
-                            <CheckCircle size={14} /> {actionLoading === listing.id ? 'Updating...' : 'Mark Purchased'}
+                            <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> 
+                            {actionLoading === listing.id ? 'Updating...' : (
+                               <>
+                                 <span className="sm:hidden">Purchased</span>
+                                 <span className="hidden sm:inline">Mark Purchased</span>
+                               </>
+                            )}
                           </button>
                         )}
                         <button 
                           disabled={actionLoading !== null}
                           onClick={() => handleDelete(listing.id)}
-                          className={`flex items-center justify-center gap-2 p-3 bg-red-600/10 text-red-500 rounded-xl hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 ${isCompleted ? 'flex-1' : ''}`}
+                          className={`flex items-center justify-center gap-1 sm:gap-2 p-2 sm:p-3 bg-red-600/10 text-red-500 rounded-lg sm:rounded-xl hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 shrink-0 ${isCompleted ? 'flex-1' : ''}`}
                         >
-                          <Trash2 size={16} />
-                          {actionLoading === listing.id ? <span className="text-[10px] font-black uppercase tracking-widest ml-1">Deleting...</span> : (isCompleted ? <span className="text-[10px] font-black uppercase tracking-widest ml-1">Remove</span> : <span className="sr-only">Delete</span>)}
+                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                          {actionLoading === listing.id ? (
+                             <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest ml-0 sm:ml-1">Deleting...</span>
+                          ) : (isCompleted ? (
+                             <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest ml-0 sm:ml-1">Remove</span>
+                          ) : (
+                             <span className="sr-only">Delete</span>
+                          ))}
                         </button>
                       </div>
                     </div>
