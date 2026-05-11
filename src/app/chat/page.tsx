@@ -25,6 +25,8 @@ function ChatContent() {
   const [isSocketReady, setIsSocketReady] = useState(false);
   const [productDataCache, setProductDataCache] = useState<Record<string, any>>({});
   
+  const [showNotification, setShowNotification] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeChatRef = useRef<any>(null);
@@ -112,32 +114,32 @@ function ChatContent() {
         unreadCount: parseInt(c.unread_count) || 0
       }));
 
-      if (sellerId && !conversationList.find((c: any) => c.sellerId === sellerId)) {
-        const sellerRes = await axios.get(`${BASE_URL}/auth/users/${sellerId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const seller = sellerRes.data;
-        
+      // Enhanced uniqueness: check for seller AND listing
+      const existingProductChat = conversationList.find((c: any) => 
+        (c.sellerId === sellerId || c.chatSellerId === sellerId) && c.listingId === urlListingId
+      );
+
+      if (sellerId && !existingProductChat) {
         const newChat = {
           id: `temp_${sellerId}`,
-          name: seller.name,
+          name: sellerId.substring(0, 8), // Placeholder name
+          lastMessage: 'Starting a new conversation...',
+          time: 'Now',
           sellerId: sellerId,
           listingId: urlListingId,
-          chatSellerId: sellerId,
-          lastMessage: 'Start a conversation...',
-          isTemp: true
+          unreadCount: 0
         };
         conversationList.unshift(newChat);
         if (!activeChat) setActiveChat(newChat);
-      } else if (sellerId && !activeChat) {
-         const existing = conversationList.find((c: any) => c.sellerId === sellerId);
-         if (existing) {
-            setActiveChat(existing);
-         }
+      } else if (existingProductChat) {
+        if (!activeChat) setActiveChat(existingProductChat);
+      } else if (!activeChat && conversationList.length > 0) {
+        setActiveChat(conversationList[0]);
       }
 
       setChats(conversationList);
     } catch (err) {
+      setErrorMsg('Failed to load chats.');
       console.error('Failed to load chats:', err);
     } finally {
       setLoading(false);
@@ -155,8 +157,9 @@ function ChatContent() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMessages(res.data);
-    } catch (err) {
-      console.error('Failed to load messages:', err);
+    } catch (err: any) {
+      console.error('Fetch messages failed:', err);
+      setErrorMsg('Could not load chat history.');
     }
   };
 
@@ -184,6 +187,7 @@ function ChatContent() {
       hasSentAutoEnquiry.current = urlListingId;
       setActiveChat((prev: any) => ({ ...prev, isTemp: false }));
     } catch (e) {
+      setErrorMsg('Auto-enquiry could not be sent.');
       console.error('Failed to send auto-enquiry:', e);
     }
   };
@@ -225,16 +229,20 @@ function ChatContent() {
   const handleSend = () => {
     if (!message.trim() || !activeChat || !user) return;
 
-    const messageData = {
-      chatId: activeChat.id,
-      senderId: user.id,
-      receiverId: activeChat.sellerId,
-      content: message.trim(),
-      listingId: activeChat.listingId
-    };
+    try {
+      const messageData = {
+        chatId: activeChat.id,
+        senderId: user.id,
+        receiverId: activeChat.sellerId || activeChat.chatSellerId,
+        content: message.trim(),
+        listingId: activeChat.listingId
+      };
 
-    socketRef.current?.emit('send_message', messageData);
-    setMessage('');
+      socketRef.current?.emit('send_message', messageData);
+      setMessage('');
+    } catch (err) {
+      setErrorMsg('Message not sent. Try again.');
+    }
   };
 
   const handleMarkSoldShortcut = async () => {
@@ -250,7 +258,7 @@ function ChatContent() {
       setActiveChat((prev: any) => ({ ...prev, listingId: null })); 
     } catch (err) {
       console.error('Failed to mark sold:', err);
-      alert('Failed to update status. Please try again.');
+      setErrorMsg('Failed to update status. Please try again.');
     }
   };
 
@@ -260,7 +268,23 @@ function ChatContent() {
     <div className="min-h-screen">
       <PageHeader title="Messages" subtitle="Real-time Chat" />
       
-      <div className="max-w-7xl mx-auto px-6 md:px-12 py-12">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 py-12 relative">
+          {/* Error Message */}
+          <AnimatePresence>
+            {errorMsg && (
+              <motion.div 
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="absolute top-0 left-1/2 -translate-x-1/2 z-50 mt-4 px-6 py-3 bg-red-500 text-white rounded-full shadow-2xl font-bold text-sm flex items-center gap-3"
+              >
+                <AlertCircle size={18} />
+                {errorMsg}
+                <button onClick={() => setErrorMsg(null)} className="ml-2 hover:opacity-70"><X size={14} /></button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
         <div className="h-[calc(100vh-250px)] flex gap-8">
 
           {/* Chat List */}
