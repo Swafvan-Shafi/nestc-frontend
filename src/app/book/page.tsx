@@ -24,6 +24,11 @@ const VERIFIED_DRIVERS = [
 const MapPicker = dynamic(() => import('@/components/RideMap').then(mod => mod.MapPicker), { ssr: false });
 const MapViewer = dynamic(() => import('@/components/RideMap').then(mod => mod.MapViewer), { ssr: false });
 
+const NIT_CAMPUS_PLACES = [
+  "Main Gate", "Mega Hostel", "Old Mega Hostel", "MBH2", "LH 1", "LH 2", "Library", "CSED",
+  "Main Building", "Cafeteria", "Sports Complex", "Auditorium", "R&C Block", "ECED"
+];
+
 export default function BookPage() {
   const [status, setStatus] = useState<'idle' | 'searching' | 'requesting' | 'accepted' | 'arrived'>('idle');
   const [suggestedDrivers, setSuggestedDrivers] = useState<any[]>(VERIFIED_DRIVERS);
@@ -31,6 +36,7 @@ export default function BookPage() {
   const [activeBooking, setActiveBooking] = useState<any>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [showCampusMap, setShowCampusMap] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [pickupSuggestions, setPickupSuggestions] = useState<any[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -248,8 +254,41 @@ export default function BookPage() {
   if (!mounted) return <div className="min-h-screen bg-[#0a0a0b]" />;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
       <PageHeader title="Book a Ride" subtitle="Secure Automated Dispatch" />
+
+      <AnimatePresence>
+        {showCampusMap && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#111] border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon className="text-blue-500" /> NITC Campus Places</h3>
+                <button onClick={() => setShowCampusMap(false)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-all"><X size={20} /></button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                {NIT_CAMPUS_PLACES.map((place) => (
+                  <button
+                    key={place}
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, pickup: place }));
+                      setShowCampusMap(false);
+                    }}
+                    className="p-4 bg-white/5 hover:bg-blue-600/20 hover:border-blue-500/50 border border-white/5 rounded-2xl text-sm font-bold text-gray-300 hover:text-white transition-all text-left flex flex-col gap-2"
+                  >
+                    <MapPin size={16} className="text-blue-500" />
+                    {place}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <div className="max-w-7xl mx-auto px-6 md:px-12 py-12 space-y-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -269,18 +308,22 @@ export default function BookPage() {
               <div className="group relative">
                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 ml-2">Pickup Point</label>
                 <div className="relative flex flex-col sm:block">
-                  <div className="absolute left-4 sm:left-5 top-[1.5rem] sm:top-1/2 -translate-y-1/2 text-blue-500"><MapPin size={18} /></div>
+                  <button 
+                    type="button"
+                    onClick={() => setShowCampusMap(true)}
+                    className="absolute left-4 sm:left-5 top-[1.5rem] sm:top-1/2 -translate-y-1/2 text-blue-500 hover:text-white transition-all z-10 p-2 -ml-2 rounded-lg hover:bg-blue-600/20"
+                    title="Select Campus Place"
+                  >
+                    <MapIcon size={18} />
+                  </button>
                   <input 
                     type="text" 
-                    placeholder="Paste link or type location..."
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-12 sm:pl-16 pr-4 sm:pr-40 py-4 sm:py-5 text-white focus:outline-none focus:border-blue-500 transition-all shadow-inner"
+                    placeholder="Select map icon or type location..."
+                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-12 sm:pl-16 pr-4 sm:pr-32 py-4 sm:py-5 text-white focus:outline-none focus:border-blue-500 transition-all shadow-inner"
                     value={formData.pickup}
                     onChange={(e) => handlePickupChange(e.target.value)}
                   />
                   <div className="flex sm:absolute sm:right-3 sm:top-1/2 sm:-translate-y-1/2 gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
-                    <button type="button" onClick={() => window.open('https://www.google.com/maps', '_blank')} className="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex justify-center items-center">
-                       <ExternalLink size={14} />
-                    </button>
                     <button type="button" onClick={getCurrentLocation} className="flex-[2] sm:flex-none px-4 py-3 sm:py-2 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex justify-center items-center">
                       {isLocating ? <Loader2 size={14} className="animate-spin" /> : 'Locate Me'}
                     </button>
@@ -304,18 +347,14 @@ export default function BookPage() {
               <div className="group relative">
                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 ml-2">Destination</label>
                 <div className="relative flex flex-col sm:block">
-                  <div className="absolute left-4 sm:left-5 top-[1.5rem] sm:top-1/2 -translate-y-1/2 text-emerald-500"><Navigation size={18} /></div>
+                  <div className="absolute left-4 sm:left-5 top-[1.5rem] sm:top-1/2 -translate-y-1/2 text-emerald-500"><MapPin size={18} /></div>
                   <input 
                     type="text" 
-                    placeholder="Enter destination or pick on map..."
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-12 sm:pl-16 pr-4 sm:pr-32 py-4 sm:py-5 text-white focus:outline-none focus:border-emerald-500 transition-all shadow-inner"
+                    placeholder="Type destination..."
+                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-12 sm:pl-16 pr-4 py-4 sm:py-5 text-white focus:outline-none focus:border-emerald-500 transition-all shadow-inner"
                     value={formData.destination}
                     onChange={(e) => handleDestChange(e.target.value)}
                   />
-                  <div className="flex sm:absolute sm:right-3 sm:top-1/2 sm:-translate-y-1/2 gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
-                     <button type="button" onClick={() => setShowMap(!showMap)} className={`flex-[2] sm:flex-none px-4 py-3 sm:py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex justify-center items-center ${showMap ? 'bg-emerald-600 text-white' : 'bg-emerald-600/10 text-emerald-500'}`}>Map</button>
-                     <button type="button" onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(formData.destination)}`)} className="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-white/5 hover:bg-white text-gray-400 hover:text-black rounded-xl text-[10px] font-black transition-all flex justify-center items-center"><Search size={14} /></button>
-                  </div>
                 </div>
 
               </div>

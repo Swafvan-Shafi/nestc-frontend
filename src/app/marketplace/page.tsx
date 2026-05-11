@@ -8,6 +8,7 @@ import PageHeader from '@/components/PageHeader';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 const categories = ['All', 'Books', 'Electronics', 'Stationery', 'Lab', 'Cycles', 'Other'];
 
 export default function MarketplacePage() {
@@ -31,7 +32,7 @@ export default function MarketplacePage() {
     try {
       const token = localStorage.getItem('nestc_token');
       
-      const res = await axios.get(`http://localhost:5000/api/v1/marketplace/listings`, {
+      const res = await axios.get(`${API_URL}/marketplace/listings`, {
         params: {
           type: 'Have',
           category: activeCategory,

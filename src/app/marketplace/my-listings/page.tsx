@@ -8,6 +8,8 @@ import PageHeader from '@/components/PageHeader';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
 export default function MyListingsPage() {
   const router = useRouter();
   const [listings, setListings] = useState<any[]>([]);
@@ -27,7 +29,7 @@ export default function MyListingsPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('nestc_token');
-      const res = await axios.get(`http://localhost:5000/api/v1/marketplace/listings`, {
+      const res = await axios.get(`${API_URL}/marketplace/listings`, {
         params: {
           sellerId: userId,
           status: 'all'
@@ -50,7 +52,7 @@ export default function MyListingsPage() {
     try {
       const token = localStorage.getItem('nestc_token');
       // FIXED: Use .patch() instead of .get() as required by the backend routes
-      await axios.patch(`http://localhost:5000/api/v1/marketplace/listings/${id}/traded`, {}, {
+      await axios.patch(`${API_URL}/marketplace/listings/${id}/traded`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchMyListings(currentUser.id);
@@ -65,7 +67,7 @@ export default function MyListingsPage() {
     
     try {
       const token = localStorage.getItem('nestc_token');
-      await axios.delete(`http://localhost:5000/api/v1/marketplace/listings/${id}`, {
+      await axios.delete(`${API_URL}/marketplace/listings/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchMyListings(currentUser.id);

@@ -119,17 +119,26 @@ export default function PostListingPage() {
         <motion.div 
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="glass-card p-12 text-center"
+          className="glass-card p-12 text-center flex flex-col items-center"
         >
           <div className="w-20 h-20 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 size={40} />
           </div>
           <h2 className="text-3xl font-bold text-white mb-2">Listing Posted!</h2>
-          <p className="text-gray-500">
+          <p className="text-gray-500 mb-8">
             {formData.type === 'Have' 
               ? 'Your item is now visible to all students on the marketplace.' 
               : 'Your request has been added to the request list.'}
           </p>
+          {formData.type === 'Have' ? (
+             <Link href="/marketplace" className="btn-primary w-full py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20">
+               <ShoppingCart size={18} /> Go to Marketplace
+             </Link>
+          ) : (
+             <Link href="/marketplace/requests" className="w-full py-4 bg-emerald-600 text-white font-black uppercase tracking-widest text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20">
+               <Tag size={18} /> View Request List
+             </Link>
+          )}
         </motion.div>
       </div>
     );
