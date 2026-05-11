@@ -16,6 +16,7 @@ export default function MyListingsPage() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'selling' | 'requested' | 'past'>('selling');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('nestc_user');
@@ -47,34 +48,39 @@ export default function MyListingsPage() {
     }
   };
 
-  const handleMarkSold = async (id: string) => {
-    if (!confirm('Are you sure you want to mark this item as sold? It will be removed from your public shop.')) return;
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
+    if (!confirm(`Are you sure you want to mark this item as ${newStatus}?`)) return;
     
+    setActionLoading(id);
     try {
       const token = localStorage.getItem('nestc_token');
-      // FIXED: Use .patch() instead of .get() as required by the backend routes
-      await axios.patch(`${API_URL}/marketplace/listings/${id}/traded`, {}, {
+      await axios.patch(`${API_URL}/marketplace/listings/${id}/status`, { status: newStatus }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchMyListings(currentUser.id);
+      setListings(prev => prev.map(l => l.id === id ? { ...l, status: newStatus } : l));
     } catch (err) {
-      console.error('Failed to mark as sold:', err);
+      console.error('Failed to update status:', err);
       alert('Failed to update status. Please try again.');
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('This will permanently remove the listing. This cannot be undone.')) return;
+    if (!confirm('Are you sure you want to delete this item?')) return;
     
+    setActionLoading(id);
     try {
       const token = localStorage.getItem('nestc_token');
       await axios.delete(`${API_URL}/marketplace/listings/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchMyListings(currentUser.id);
+      setListings(prev => prev.filter(l => l.id !== id));
     } catch (err) {
       console.error('Failed to delete listing:', err);
       alert('Failed to delete listing');
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -91,19 +97,19 @@ export default function MyListingsPage() {
              onClick={() => setActiveTab('selling')}
              className={`flex-1 min-w-[120px] pb-4 text-xs sm:text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap px-4 ${activeTab === 'selling' ? 'border-b-2 border-blue-500 text-blue-500' : 'border-b-2 border-transparent text-gray-500 hover:text-white'}`}
            >
-             Selling Items ({listings.filter(l => l.type === 'have' && l.status === 'active').length})
+             Selling ({listings.filter(l => l.type === 'have' && l.status === 'active').length})
            </button>
            <button 
              onClick={() => setActiveTab('requested')}
              className={`flex-1 min-w-[120px] pb-4 text-xs sm:text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap px-4 ${activeTab === 'requested' ? 'border-b-2 border-emerald-500 text-emerald-500' : 'border-b-2 border-transparent text-gray-500 hover:text-white'}`}
            >
-             Requested Items ({listings.filter(l => l.type === 'want').length})
+             Requested ({listings.filter(l => l.type === 'want' && l.status === 'active').length})
            </button>
            <button 
              onClick={() => setActiveTab('past')}
              className={`flex-1 min-w-[120px] pb-4 text-xs sm:text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap px-4 ${activeTab === 'past' ? 'border-b-2 border-gray-400 text-white' : 'border-b-2 border-transparent text-gray-500 hover:text-white'}`}
            >
-             Past Items ({listings.filter(l => l.type === 'have' && l.status === 'traded').length})
+             Past ({listings.filter(l => ['sold', 'purchased', 'traded'].includes(l.status)).length})
            </button>
         </div>
 
@@ -113,13 +119,13 @@ export default function MyListingsPage() {
                Array.from({ length: 3 }).map((_, i) => (
                  <div key={i} className="glass-card h-[250px] animate-pulse" />
                ))
-            ) : listings.filter(l => {
+            ).filter(l => {
               if (activeTab === 'selling') return l.type === 'have' && l.status === 'active';
-              if (activeTab === 'requested') return l.type === 'want';
-              if (activeTab === 'past') return l.type === 'have' && l.status === 'traded';
+              if (activeTab === 'requested') return l.type === 'want' && l.status === 'active';
+              if (activeTab === 'past') return ['sold', 'purchased', 'traded'].includes(l.status);
               return false;
             }).map((listing) => {
-              const isSold = listing.status === 'traded';
+              const isCompleted = ['sold', 'purchased', 'traded'].includes(listing.status);
               return (
                 <motion.div 
                   key={listing.id}
@@ -127,7 +133,7 @@ export default function MyListingsPage() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className={`glass-card overflow-hidden flex flex-col border-white/5 transition-all ${isSold ? 'opacity-60 grayscale-[0.5]' : 'hover:border-blue-500/30'}`}
+                  className={`glass-card overflow-hidden flex flex-col border-white/5 transition-all ${isCompleted ? 'opacity-60 grayscale-[0.5]' : 'hover:border-blue-500/30'}`}
                 >
                   <div className="flex gap-6 p-6">
                     {listing.type === 'have' && (
@@ -137,9 +143,9 @@ export default function MyListingsPage() {
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-700 font-black text-xs uppercase tracking-widest text-center px-2">No Photo</div>
                         )}
-                        {isSold && (
+                        {isCompleted && (
                           <div className="absolute inset-0 bg-emerald-600/80 backdrop-blur-sm flex items-center justify-center">
-                             <span className="text-white font-black text-[10px] uppercase tracking-[0.3em] rotate-[-15deg] border-2 border-white px-2 py-1">SOLD</span>
+                             <span className="text-white font-black text-[10px] uppercase tracking-[0.3em] rotate-[-15deg] border-2 border-white px-2 py-1">{listing.type === 'have' ? 'SOLD' : 'PURCHASED'}</span>
                           </div>
                         )}
                       </div>
@@ -158,22 +164,44 @@ export default function MyListingsPage() {
                       </div>
 
                       <div className="flex gap-2 mt-4">
-                        {listing.type === 'have' && !isSold && (
+                        {listing.type === 'have' && !isCompleted && (
                           <button 
-                            onClick={() => handleMarkSold(listing.id)}
-                            className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600/10 text-emerald-500 rounded-xl hover:bg-emerald-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
+                            disabled={actionLoading !== null}
+                            onClick={() => handleUpdateStatus(listing.id, 'sold')}
+                            className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600/10 text-emerald-500 rounded-xl hover:bg-emerald-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
                           >
-                            <CheckCircle size={14} /> Sold
+                            <CheckCircle size={14} /> {actionLoading === listing.id ? 'Updating...' : 'Mark Sold'}
+                          </button>
+                        )}
+                        {listing.type === 'want' && !isCompleted && (
+                          <button 
+                            disabled={actionLoading !== null}
+                            onClick={() => handleUpdateStatus(listing.id, 'purchased')}
+                            className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600/10 text-emerald-500 rounded-xl hover:bg-emerald-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                          >
+                            <CheckCircle size={14} /> {actionLoading === listing.id ? 'Updating...' : 'Mark Purchased'}
                           </button>
                         )}
                         <button 
+                          disabled={actionLoading !== null}
                           onClick={() => handleDelete(listing.id)}
-                          className={`flex items-center justify-center gap-2 p-3 bg-red-600/10 text-red-500 rounded-xl hover:bg-red-600 hover:text-white transition-all ${isSold ? 'flex-1' : ''}`}
+                          className={`flex items-center justify-center gap-2 p-3 bg-red-600/10 text-red-500 rounded-xl hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 ${isCompleted ? 'flex-1' : ''}`}
                         >
                           <Trash2 size={16} />
-                          {isSold && <span className="text-[10px] font-black uppercase tracking-widest ml-1">Remove</span>}
+                          {actionLoading === listing.id ? <span className="text-[10px] font-black uppercase tracking-widest ml-1">Deleting...</span> : (isCompleted ? <span className="text-[10px] font-black uppercase tracking-widest ml-1">Remove</span> : null)}
                         </button>
                       </div>
+                      
+                      {!isCompleted && (
+                        <div className="mt-2">
+                           <Link 
+                             href={`/marketplace/edit/${listing.id}`}
+                             className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 text-gray-400 rounded-xl hover:bg-white/10 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
+                           >
+                             Edit Listing
+                           </Link>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
