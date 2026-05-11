@@ -60,15 +60,17 @@ function ChatContent() {
   };
 
   useEffect(() => {
-    messages.forEach(msg => {
-      if (msg.content?.startsWith('PRODUCT_ENQUIRY:')) {
-        const lId = msg.content.split(':')[1];
-        if (lId && !productDataCache[lId]) {
-          fetchProductPreview(lId);
-        }
-      }
-    });
-  }, [messages, fetchProductPreview, productDataCache]);
+    const missingIds = messages
+      .filter(msg => msg.content?.startsWith('PRODUCT_ENQUIRY:'))
+      .map(msg => msg.content.split(':')[1])
+      .filter(lId => lId && lId !== 'null' && !productDataCache[lId]);
+    
+    if (missingIds.length > 0) {
+      // Remove duplicates
+      const uniqueIds = Array.from(new Set(missingIds));
+      uniqueIds.forEach(id => fetchProductPreview(id));
+    }
+  }, [messages]); // Only depend on messages to avoid loops
 
   useEffect(() => {
     const savedUser = localStorage.getItem('nestc_user');
@@ -129,7 +131,7 @@ function ChatContent() {
       
       const conversationList = res.data.map((c: any) => ({
         id: c.id,
-        name: c.other_user_name,
+        name: c.other_user_name || 'Student',
         sellerId: c.other_user_id,
         listingId: c.listing_id,
         chatSellerId: c.chat_seller_id,
@@ -137,6 +139,8 @@ function ChatContent() {
         time: c.last_message_time ? new Date(c.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now',
         unreadCount: parseInt(c.unread_count) || 0
       }));
+      
+      console.log('--- CONVERSATIONS FETCHED ---', conversationList);
 
       // Enhanced uniqueness: check for seller AND listing
       const existingProductChat = conversationList.find((c: any) => 
@@ -152,7 +156,7 @@ function ChatContent() {
           
           const newChat = {
             id: `temp_${sellerId}`,
-            name: seller.name,
+            name: seller.name || 'Student',
             lastMessage: 'Starting a new conversation...',
             time: 'Now',
             sellerId: sellerId,
