@@ -117,6 +117,10 @@ export default function PostListingPage() {
       router.push(formData.type === 'Have' ? '/marketplace' : '/marketplace/requests');
     } catch (err: any) {
       console.error('Post failed:', err);
+      if (err.response) {
+        console.error('Error Response Data:', err.response.data);
+        console.error('Error Status Code:', err.response.status);
+      }
       const data = err.response?.data;
       const detailedError = data?.details || data?.error || err.message;
       setErrorMsg(detailedError);
