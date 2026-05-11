@@ -43,8 +43,16 @@ export default function VendingPage() {
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
-      setFilteredHostels(allHostels);
-      setSelectedHostelId(allHostels[0]?.id || '');
+      const gender = (parsedUser.gender || '').toLowerCase();
+      if (!gender && parsedUser.role !== 'admin') {
+        setFilteredHostels([]);
+      } else {
+        const visible = parsedUser.role === 'admin' 
+          ? allHostels 
+          : allHostels.filter(h => h.gender === 'both' || h.gender === gender);
+        setFilteredHostels(visible);
+        setSelectedHostelId(visible[0]?.id || '');
+      }
     }
   }, []);
 
@@ -59,24 +67,17 @@ export default function VendingPage() {
         title="Vending" 
         subtitle="Live Machine Status" 
         action={
-          <div className="flex gap-4">
+          <>
             {user?.role === 'admin' && (
               <Link 
                 href="/vending/refill" 
-                className="btn-outline flex items-center gap-2 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10"
+                className="btn-outline flex items-center gap-2 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 text-xs px-3 py-2"
               >
-                <Wrench size={18} />
+                <Wrench size={14} />
                 Refill Panel
               </Link>
             )}
-            <button 
-              onClick={() => setSubscribed(!subscribed)}
-              className={`btn-primary flex items-center gap-2 ${subscribed ? 'bg-emerald-600 shadow-emerald-600/20' : ''}`}
-            >
-              <Bell size={18} />
-              {subscribed ? `Subscribed to ${selectedHostelId}` : 'Notify for Refills'}
-            </button>
-          </div>
+          </>
         }
       />
 
@@ -96,44 +97,51 @@ export default function VendingPage() {
           </motion.div>
 
           <div className="flex flex-col md:flex-row gap-8 items-start md:items-end">
-            {/* Hostel Dropdown */}
-            <div className="relative w-full md:w-96 z-50">
-              <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-4 block">Select Machine</label>
-              <button 
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-full flex items-center justify-between px-8 py-5 bg-white/5 border border-white/10 rounded-[2rem] text-white font-bold hover:border-blue-500 transition-all shadow-xl"
-              >
-                <span className="flex items-center gap-3">
-                  <MapPin size={18} className="text-blue-500" />
-                  {selectedHostelId}
-                </span>
-                <ChevronDown className={`transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-              
-              <AnimatePresence>
-                {isDropdownOpen && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute top-full left-0 right-0 mt-3 bg-[#0d0d0d] border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl z-[60] backdrop-blur-xl"
-                  >
-                    {filteredHostels.map((hostel) => (
-                      <button 
-                        key={hostel.id}
-                        onClick={() => {
-                          setSelectedHostelId(hostel.id);
-                          setIsDropdownOpen(false);
-                        }}
-                        className="w-full text-left px-8 py-5 text-gray-400 hover:text-white hover:bg-white/5 transition-all font-bold border-b border-white/5 last:border-0"
-                      >
-                        {hostel.id}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            {filteredHostels.length === 0 ? (
+              <div className="w-full p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-center">
+                <AlertCircle size={24} className="mx-auto text-red-500 mb-2" />
+                <p className="text-red-400 font-bold text-sm">Complete your profile to view available vending machines.</p>
+                <Link href="/profile" className="inline-block mt-4 text-[10px] uppercase font-black tracking-widest text-white bg-red-500 px-4 py-2 rounded-xl">Go to Profile</Link>
+              </div>
+            ) : (
+              <div className="relative w-full md:w-96 z-50">
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-4 block">Select Machine</label>
+                <button 
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-full flex items-center justify-between px-8 py-5 bg-white/5 border border-white/10 rounded-[2rem] text-white font-bold hover:border-blue-500 transition-all shadow-xl"
+                >
+                  <span className="flex items-center gap-3">
+                    <MapPin size={18} className="text-blue-500" />
+                    {selectedHostelId}
+                  </span>
+                  <ChevronDown className={`transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                <AnimatePresence>
+                  {isDropdownOpen && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute top-full left-0 right-0 mt-3 bg-[#0d0d0d] border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl z-[60] backdrop-blur-xl"
+                    >
+                      {filteredHostels.map((hostel) => (
+                        <button 
+                          key={hostel.id}
+                          onClick={() => {
+                            setSelectedHostelId(hostel.id);
+                            setIsDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-8 py-5 text-gray-400 hover:text-white hover:bg-white/5 transition-all font-bold border-b border-white/5 last:border-0"
+                        >
+                          {hostel.id}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
           </div>
         </section>
 
@@ -142,26 +150,33 @@ export default function VendingPage() {
              <h2 className="text-3xl font-bold text-white tracking-tight">Available Items</h2>
              <span className="text-xs font-bold text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full">{availableItems.length} Products Available</span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pb-20">
-            {mockItems.map((item) => (
-              <div 
-                key={item.id} 
-                className={`glass-card p-4 flex flex-col items-center justify-center text-center border-white/10 ${item.stock === 0 ? 'opacity-50' : 'hover:border-blue-500/30'} transition-all`}
-              >
-                <h3 className="text-sm font-bold text-white leading-tight mb-2 line-clamp-2 min-h-[40px] flex items-center">{item.name}</h3>
-                <p className="text-sm text-blue-400 font-black mb-3">₹{item.price}</p>
-                
-                <div className="flex flex-col items-center gap-1">
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${
-                    item.stock === 0 ? 'text-red-500' : item.stock < 5 ? 'text-yellow-500' : 'text-emerald-500'
-                  }`}>
-                    {item.stock === 0 ? 'Out of Stock' : item.stock < 5 ? 'Low Stock' : 'Available'}
-                  </span>
-                  <span className="text-xs text-gray-400 font-bold">{item.stock} left</span>
+          {filteredHostels.length > 0 && (
+            <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4 pb-20">
+              {mockItems.map((item) => (
+                <div 
+                  key={item.id} 
+                  className={`glass-card p-2 sm:p-4 flex flex-col items-center justify-between text-center border-white/10 ${item.stock === 0 ? 'opacity-60' : 'hover:border-blue-500/30'} transition-all`}
+                >
+                  <img src={item.image} alt={item.name} className="w-12 h-12 sm:w-16 sm:h-16 object-contain mb-2" />
+                  <h3 className="text-[10px] sm:text-xs font-bold text-white leading-tight mb-1 line-clamp-2 h-[28px] sm:h-[32px]">{item.name}</h3>
+                  <p className="text-[10px] sm:text-xs text-blue-400 font-black mb-1">₹{item.price}</p>
+                  
+                  <div className="flex flex-col items-center gap-1 mb-2">
+                    <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest ${
+                      item.stock === 0 ? 'text-red-500' : item.stock < 5 ? 'text-yellow-500' : 'text-emerald-500'
+                    }`}>
+                      {item.stock === 0 ? 'Out' : item.stock < 5 ? 'Low' : 'Available'}
+                    </span>
+                    <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold">{item.stock} left</span>
+                  </div>
+                  
+                  <button className="w-full py-1.5 sm:py-2 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1">
+                    <Bell size={10} /> Notify
+                  </button>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
           
           {availableItems.length === 0 && (
             <div className="text-center py-20 bg-white/5 rounded-[2.5rem] border border-white/5">

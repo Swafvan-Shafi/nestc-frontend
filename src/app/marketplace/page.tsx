@@ -64,15 +64,9 @@ export default function MarketplacePage() {
         title="Marketplace" 
         subtitle="Live Campus Trade" 
         action={
-          <div className="flex items-center gap-2 sm:gap-3">
-             <Link href="/marketplace/requests" className="p-2 sm:p-3 bg-white/5 rounded-xl text-gray-400 hover:text-white transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest border border-white/5 shadow-lg">
-                <Tag size={18} /> <span className="hidden sm:inline">Request List</span>
-             </Link>
-             <Link href="/marketplace/my-listings" className="p-2 sm:p-3 bg-white/5 rounded-xl text-gray-400 hover:text-white transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest shadow-lg">
-                <LayoutGrid size={18} /> <span className="hidden sm:inline">My Shop</span>
-             </Link>
-             <Link href="/marketplace/post" className="btn-primary flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 text-xs shadow-lg shadow-blue-500/20">
-                <Plus size={18} /> <span className="hidden sm:inline">Post</span>
+          <div className="flex items-center">
+             <Link href="/marketplace/post" className="p-3 bg-blue-600/10 text-blue-500 hover:bg-blue-600 hover:text-white rounded-xl transition-all shadow-lg flex items-center justify-center">
+                <Plus size={20} />
              </Link>
           </div>
         }
@@ -94,11 +88,20 @@ export default function MarketplacePage() {
           
           <button 
             onClick={() => setShowUrgentOnly(!showUrgentOnly)}
-            className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border font-bold transition-all whitespace-nowrap ${showUrgentOnly ? 'bg-red-500/10 border-red-500 text-red-500 shadow-lg shadow-red-500/10' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-4 rounded-2xl border font-bold transition-all whitespace-nowrap ${showUrgentOnly ? 'bg-red-500/10 border-red-500 text-red-500 shadow-lg shadow-red-500/10' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
           >
-            <AlertCircle size={20} />
-            Urgent Only
+            <AlertCircle size={18} />
+            <span className="text-xs uppercase tracking-widest">Urgent</span>
           </button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <Link href="/marketplace/requests" className="flex-1 p-4 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 rounded-2xl text-emerald-500 transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/5">
+             <Tag size={18} /> View Request List
+          </Link>
+          <Link href="/marketplace/my-listings" className="flex-1 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-gray-400 hover:text-white transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs shadow-lg">
+             <LayoutGrid size={18} /> Manage My Shop
+          </Link>
         </div>
 
         <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar border-b border-white/5">
@@ -129,9 +132,8 @@ export default function MarketplacePage() {
                 className={`glass-card relative group overflow-hidden flex flex-col transition-all border-white/5 hover:border-blue-500/30 ${listing.is_urgent ? 'ring-1 ring-red-500/50' : ''}`}
               >
                 {listing.is_urgent && (
-                  <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-red-500/90 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-red-500/50 flex items-center gap-1 backdrop-blur-md border border-red-400">
-                    <AlertCircle size={12} />
-                    Urgent · 24h
+                  <div className="absolute top-3 right-3 z-10 px-2 py-1 bg-red-500 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-red-500/30 flex items-center justify-center">
+                    URGENT
                   </div>
                 )}
                 {listing.photos?.[0] && (
@@ -150,6 +152,9 @@ export default function MarketplacePage() {
                     <div>
                       <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Seller</p>
                       <p className="text-sm font-bold text-white">{listing.seller_name || 'Anonymous Student'}</p>
+                      {listing.seller_hostel && (
+                        <p className="text-[10px] text-blue-500 font-bold tracking-wider mt-0.5">{listing.seller_hostel}</p>
+                      )}
                     </div>
                   </div>
                   <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">

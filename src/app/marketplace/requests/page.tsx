@@ -97,9 +97,8 @@ export default function RequestListPage() {
                 className={`glass-card relative group overflow-hidden flex flex-col transition-all border-white/5 hover:border-emerald-500/30 ${listing.is_urgent ? 'ring-1 ring-red-500/50' : ''}`}
               >
                 {listing.is_urgent && (
-                  <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-red-500/90 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-red-500/50 flex items-center gap-1 backdrop-blur-md border border-red-400">
-                    <AlertCircle size={12} />
-                    Urgent
+                  <div className="absolute top-3 right-3 z-10 px-2 py-1 bg-red-500 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-red-500/30 flex items-center justify-center">
+                    URGENT
                   </div>
                 )}
                 
@@ -117,6 +116,9 @@ export default function RequestListPage() {
                     <div>
                       <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Requester</p>
                       <p className="text-sm font-bold text-white">{listing.seller_name || 'Anonymous Student'}</p>
+                      {listing.seller_hostel && (
+                        <p className="text-[10px] text-emerald-500 font-bold tracking-wider mt-0.5">{listing.seller_hostel}</p>
+                      )}
                     </div>
                   </div>
                   
@@ -129,9 +131,9 @@ export default function RequestListPage() {
                     {currentUser?.id !== listing.seller_id ? (
                       <button 
                         onClick={() => router.push(`/chat?sellerId=${listing.seller_id}&listingId=${listing.id}`)}
-                        className="px-4 py-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest bg-white/5 rounded-xl transition-all hover:bg-emerald-600 text-emerald-500 hover:text-white"
+                        className="p-3 bg-white/5 rounded-xl transition-all hover:bg-emerald-600 text-emerald-500 hover:text-white"
                       >
-                         I have this
+                         <MessageCircle size={22} />
                       </button>
                     ) : (
                       <Link href="/marketplace/my-listings" className="text-[9px] font-black uppercase text-emerald-500 tracking-widest hover:underline transition-all">Manage</Link>
