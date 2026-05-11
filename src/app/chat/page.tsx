@@ -42,6 +42,13 @@ function ChatContent() {
     activeChatRef.current = activeChat;
   }, [activeChat]);
 
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages.length]);
+
   const formatImageUrl = (url: string) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
@@ -51,40 +58,47 @@ function ChatContent() {
   };
 
   const getDeterministicId = (uid1: string, uid2: string, lid?: string) => {
+    if (!uid1 || !uid2) return 'unknown';
     const ids = [uid1, uid2].sort();
     const baseId = `p2p_${ids[0].substring(0, 8)}_${ids[1].substring(0, 8)}`;
     return lid ? `${baseId}_${lid.substring(0, 8)}` : baseId;
   };
 
   const fetchProductPreview = useCallback(async (lId: string) => {
-    if (!lId || lId === 'null') return;
+    if (!lId || lId === 'null' || productDataCache[lId]) return;
     try {
       const token = localStorage.getItem('nestc_token');
       const res = await axios.get(`${BASE_URL}/marketplace/listings/${lId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setProductDataCache(prev => ({ ...prev, [lId]: res.data }));
-    } catch (e) { console.error(e); }
-  }, []);
+      if (res.data) setProductDataCache(prev => ({ ...prev, [lId]: res.data }));
+    } catch (e) { console.error('Product fetch failed:', e); }
+  }, [productDataCache]);
 
   const fetchMessages = async (chatId: string) => {
+    if (!chatId) return;
     try {
       const token = localStorage.getItem('nestc_token');
       const res = await axios.get(`${BASE_URL}/chat/messages/${chatId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMessages(Array.isArray(res.data) ? res.data : []);
-    } catch (err) { setMessages([]); }
+    } catch (err) { 
+      console.error('Messages fetch failed:', err);
+      setMessages([]); 
+    }
   };
 
   const fetchConversations = async (userId: string) => {
+    if (!userId) return;
     try {
       const token = localStorage.getItem('nestc_token');
       const res = await axios.get(`${BASE_URL}/chat/conversations`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      let list = res.data.map((c: any) => ({
+      const rawData = Array.isArray(res.data) ? res.data : [];
+      let list = rawData.map((c: any) => ({
         id: c.id,
         name: c.other_user_name || 'Student',
         sellerId: c.other_user_id,
@@ -96,30 +110,34 @@ function ChatContent() {
         isTemp: false
       }));
 
+      // Instant Sidebar Injection for new chats
       if (sellerId && urlListingId) {
         const detId = getDeterministicId(userId, sellerId, urlListingId);
         const exists = list.find((c: any) => c.id === detId);
         if (!exists) {
           const newEntry = {
             id: detId,
-            name: urlSellerName || 'Student',
+            name: urlSellerName || 'New Inquiry',
             sellerId: sellerId,
             listingId: urlListingId,
             isTemp: true,
             time: 'Now',
-            lastMessage: 'Interested in: ' + (urlTitle || 'Product')
+            lastMessage: 'Regarding: ' + (urlTitle || 'Product')
           };
           list = [newEntry, ...list];
-          setActiveChat(newEntry);
-        } else {
+          if (!activeChatRef.current) setActiveChat(newEntry);
+        } else if (!activeChatRef.current) {
           setActiveChat(exists);
         }
-      } else if (!activeChat && list.length > 0) {
+      } else if (!activeChatRef.current && list.length > 0) {
         setActiveChat(list[0]);
       }
       setChats(list);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+    } catch (err) { 
+      console.error('Conversations fetch failed:', err);
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   useEffect(() => {
@@ -129,13 +147,20 @@ function ChatContent() {
       setUser(parsedUser);
       const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
       socketRef.current = socket;
-      socket.on('connect', () => { setIsConnected(true); setIsSocketReady(true); socket.emit('register_user', parsedUser.id); });
+      
+      socket.on('connect', () => { 
+        setIsConnected(true); 
+        setIsSocketReady(true); 
+        socket.emit('register_user', parsedUser.id); 
+      });
+
       socket.on('new_message', (data) => {
         if (activeChatRef.current?.id === data.chatId || activeChatRef.current?.id === data.message.chat_id) {
           setMessages(prev => prev.some(m => m.id === data.message.id) ? prev : [...prev, data.message]);
         }
         fetchConversations(parsedUser.id);
       });
+
       fetchConversations(parsedUser.id);
     }
     return () => { socketRef.current?.disconnect(); };
@@ -148,79 +173,121 @@ function ChatContent() {
     }
   }, [activeChat?.id]);
 
+  // Handle URL Product Context
   useEffect(() => {
     if (urlListingId && urlTitle) {
-      setProductDataCache(prev => ({ ...prev, [urlListingId]: { title: urlTitle, price: urlPrice, photo_url: urlImg } }));
+      setProductDataCache(prev => ({ 
+        ...prev, 
+        [urlListingId]: { title: urlTitle, price: urlPrice, photo_url: urlImg } 
+      }));
     }
-  }, [urlListingId, urlTitle, urlImg]);
+  }, [urlListingId, urlTitle, urlImg, urlPrice]);
 
   useEffect(() => {
-    if (activeChat && urlListingId && isSocketReady && hasSentAutoEnquiry.current !== urlListingId) {
-       const content = `PRODUCT_ENQUIRY:${urlListingId}:Hi, I'm interested in this!`;
-       socketRef.current?.emit('send_message', { chatId: activeChat.id, senderId: user.id, receiverId: activeChat.sellerId, content, listingId: urlListingId });
+    if (activeChat && urlListingId && isSocketReady && hasSentAutoEnquiry.current !== urlListingId && user) {
+       const content = `PRODUCT_ENQUIRY:${urlListingId}:Hi, I'm interested in this product!`;
+       socketRef.current?.emit('send_message', { 
+         chatId: activeChat.id, 
+         senderId: user.id, 
+         receiverId: activeChat.sellerId || sellerId, 
+         content, 
+         listingId: urlListingId 
+       });
        hasSentAutoEnquiry.current = urlListingId;
-       setMessages(prev => [...prev, { id: 'temp_'+Date.now(), sender_id: user.id, content, created_at: new Date().toISOString() }]);
+       setMessages(prev => [...prev, { 
+         id: 'temp_'+Date.now(), 
+         sender_id: user.id, 
+         content, 
+         created_at: new Date().toISOString() 
+       }]);
     }
-  }, [activeChat?.id, isSocketReady]);
+  }, [activeChat?.id, isSocketReady, user, urlListingId, sellerId]);
 
   const handleSend = () => {
     if (!message.trim() || !activeChat || !user) return;
     const content = message.trim();
-    socketRef.current?.emit('send_message', { chatId: activeChat.id, senderId: user.id, receiverId: activeChat.sellerId || activeChat.chatSellerId, content, listingId: activeChat.listingId });
-    setMessages(prev => [...prev, { id: 'temp_'+Date.now(), sender_id: user.id, content, created_at: new Date().toISOString() }]);
+    socketRef.current?.emit('send_message', { 
+      chatId: activeChat.id, 
+      senderId: user.id, 
+      receiverId: activeChat.sellerId || activeChat.chatSellerId || sellerId, 
+      content, 
+      listingId: activeChat.listingId || urlListingId 
+    });
+    setMessages(prev => [...prev, { 
+      id: 'temp_'+Date.now(), 
+      sender_id: user.id, 
+      content, 
+      created_at: new Date().toISOString() 
+    }]);
     setMessage('');
   };
 
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
   useEffect(() => { if (activeChat) setMobileView('chat'); }, [activeChat?.id]);
 
+  if (loading && !chats.length) {
+    return <div className="min-h-screen flex items-center justify-center bg-[#050505] text-white flex-col gap-4">
+      <Loader2 className="animate-spin text-blue-500" size={48} />
+      <p className="text-xs font-black uppercase tracking-widest opacity-40">Initializing NestC Chat...</p>
+    </div>;
+  }
+
   return (
-    <div className="min-h-screen bg-[#050505]">
-      <PageHeader title="NestC Messenger" subtitle="WhatsApp style trade chat" />
+    <div className="min-h-screen bg-[#050505] selection:bg-blue-500/30">
+      <PageHeader title="Messenger" subtitle="Campus Trade Hub" />
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-white/[0.02] border border-white/10 rounded-[2.5rem] overflow-hidden flex h-[750px] shadow-2xl backdrop-blur-3xl">
+        <div className="bg-white/[0.02] border border-white/10 rounded-[3rem] overflow-hidden flex h-[750px] shadow-2xl backdrop-blur-3xl relative">
           
-          {/* Sidebar - List of chats */}
-          <div className={`${mobileView === 'chat' ? 'hidden' : 'flex'} md:flex flex-col w-full md:w-96 border-r border-white/5 bg-black/40`}>
-            <div className="p-8 border-b border-white/5 flex justify-between items-center">
-              <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest">Recent Chats</h2>
-              <button onClick={() => user && fetchConversations(user.id)} className="p-2 hover:bg-white/5 rounded-full text-gray-600"><RefreshCw size={16}/></button>
+          {/* Sidebar */}
+          <div className={`${mobileView === 'chat' ? 'hidden' : 'flex'} md:flex flex-col w-full md:w-96 border-r border-white/5 bg-black/40 z-20`}>
+            <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+              <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest">Conversations</h2>
+              <button onClick={() => user && fetchConversations(user.id)} className="p-2 hover:bg-white/5 rounded-full text-gray-600 transition-all active:scale-90"><RefreshCw size={16}/></button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
               {chats.map(chat => (
-                <div key={chat.id} onClick={() => setActiveChat(chat)} className={`p-5 rounded-[1.5rem] cursor-pointer transition-all border ${activeChat?.id === chat.id ? 'bg-blue-600 border-blue-500 shadow-xl' : 'bg-white/5 border-transparent hover:bg-white/10'}`}>
+                <div 
+                  key={chat.id} 
+                  onClick={() => setActiveChat(chat)} 
+                  className={`p-5 rounded-[1.5rem] cursor-pointer transition-all border ${activeChat?.id === chat.id ? 'bg-blue-600 border-blue-500 shadow-xl' : 'bg-white/5 border-transparent hover:bg-white/10'}`}
+                >
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-bold text-white text-sm truncate pr-2">{chat.name}</span>
                     <span className="text-[9px] opacity-40 font-bold whitespace-nowrap">{chat.time}</span>
                   </div>
-                  <p className={`text-xs truncate ${activeChat?.id === chat.id ? 'text-white/70' : 'text-gray-500'}`}>{chat.lastMessage?.startsWith('PRODUCT_ENQUIRY:') ? '📦 Regarding product' : chat.lastMessage}</p>
+                  <p className={`text-xs truncate ${activeChat?.id === chat.id ? 'text-white/70' : 'text-gray-500'}`}>
+                    {chat.lastMessage?.startsWith('PRODUCT_ENQUIRY:') ? '📦 Product Interest' : chat.lastMessage}
+                  </p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Chat Area */}
-          <div className={`${mobileView === 'list' ? 'hidden' : 'flex'} md:flex flex-1 flex-col bg-black/20 relative`}>
+          {/* Chat Window */}
+          <div className={`${mobileView === 'list' ? 'hidden' : 'flex'} md:flex flex-1 flex-col bg-black/20 relative z-10`}>
             {activeChat ? (
               <>
                 <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02] backdrop-blur-xl">
                   <div className="flex items-center gap-4">
                     <button onClick={() => setMobileView('list')} className="md:hidden p-2 text-gray-400"><ChevronLeft/></button>
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg">{activeChat.name.charAt(0).toUpperCase()}</div>
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg border border-white/20">
+                      {activeChat.name?.charAt(0).toUpperCase()}
+                    </div>
                     <div>
                       <h2 className="font-bold text-white leading-tight">{activeChat.name}</h2>
                       <div className="flex items-center gap-2">
                         <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
-                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{isConnected ? 'Connected' : 'Offline'}</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{isConnected ? 'Online' : 'Offline'}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex-1 p-8 overflow-y-auto space-y-6 custom-scrollbar bg-gradient-to-b from-transparent to-black/20">
+                <div className="flex-1 p-8 overflow-y-auto space-y-6 custom-scrollbar bg-gradient-to-b from-transparent to-black/30" ref={scrollRef}>
                   {messages.map((msg, i) => {
                     const isMe = msg.sender_id === user?.id || msg.senderId === user?.id;
                     const content = msg.content || '';
+                    
                     if (content.startsWith('PRODUCT_ENQUIRY:')) {
                       const parts = content.split(':');
                       const lId = parts[1];
@@ -228,16 +295,17 @@ function ChatContent() {
                       if (lId && !productDataCache[lId]) fetchProductPreview(lId);
                       const product = productDataCache[lId];
                       const photoUrl = product?.photo_url || product?.photos?.[0] || product?.imageUrl;
+
                       return (
                         <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-[85%] sm:max-w-[70%] rounded-3xl overflow-hidden shadow-2xl border ${isMe ? 'bg-blue-600 border-blue-500' : 'bg-white/10 border-white/10'}`}>
                             <div className="p-4 flex items-center gap-4 bg-black/20 border-b border-white/5">
-                              <div className="w-16 h-16 rounded-xl overflow-hidden bg-black/40 flex-shrink-0 border border-white/10">
+                              <div className="w-16 h-16 rounded-xl overflow-hidden bg-black/40 flex-shrink-0 border border-white/10 shadow-lg">
                                 {photoUrl ? <img src={formatImageUrl(photoUrl)} className="w-full h-full object-cover" /> : <ImagePlaceholder className="w-full h-full p-4 opacity-10" />}
                               </div>
                               <div className="min-w-0">
-                                <p className="text-[8px] font-black uppercase text-blue-400 mb-1">Trade Enquiry</p>
-                                <p className="text-sm font-bold text-white truncate">{product?.title || 'Loading Product...'}</p>
+                                <p className="text-[8px] font-black uppercase text-blue-400 mb-1 tracking-tighter">Regarding this product</p>
+                                <p className="text-sm font-bold text-white truncate">{product?.title || 'Loading...'}</p>
                                 <p className="text-xs font-black text-white/70">₹{product?.price || '...'}</p>
                               </div>
                             </div>
@@ -246,30 +314,38 @@ function ChatContent() {
                         </div>
                       );
                     }
+
                     return (
                       <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[75%] p-5 rounded-[2rem] text-sm leading-relaxed shadow-xl ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white/10 text-gray-300 rounded-tl-none border border-white/5'}`}>
                           {content}
-                          <div className="flex justify-end mt-2 opacity-30 text-[9px] font-bold">{new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                          <div className="flex justify-end mt-2 opacity-30 text-[9px] font-bold">
+                            {new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
                         </div>
                       </div>
                     );
                   })}
-                  <div ref={scrollRef} />
                 </div>
 
-                <div className="p-8 border-t border-white/5 bg-black/40">
+                <div className="p-8 border-t border-white/5 bg-black/40 backdrop-blur-3xl">
                   <div className="flex gap-4">
-                    <input value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} className="flex-1 bg-white/[0.03] border border-white/10 rounded-full px-8 py-5 text-white focus:outline-none focus:border-blue-500 transition-all shadow-inner" placeholder="Type a message..." />
+                    <input 
+                      value={message} 
+                      onChange={(e) => setMessage(e.target.value)} 
+                      onKeyPress={(e) => e.key === 'Enter' && handleSend()} 
+                      className="flex-1 bg-white/[0.03] border border-white/10 rounded-full px-8 py-5 text-white focus:outline-none focus:border-blue-500 transition-all shadow-inner placeholder:text-gray-600" 
+                      placeholder="Type your message..." 
+                    />
                     <button onClick={handleSend} className="p-5 bg-blue-600 text-white rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all"><Send size={20}/></button>
                   </div>
                 </div>
               </>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-20 text-center opacity-10">
-                <MessageSquare size={100} strokeWidth={1} className="mb-8" />
-                <h2 className="text-4xl font-black uppercase tracking-tighter mb-4">NestC Chat</h2>
-                <p className="max-w-md">Select a person from the list on the left to start your campus trade conversation.</p>
+                <MessageSquare size={120} strokeWidth={1} className="mb-8" />
+                <h2 className="text-4xl font-black uppercase tracking-tighter mb-4">Select Chat</h2>
+                <p className="max-w-md font-medium">Click on a person from the sidebar to view your messages and start trading.</p>
               </div>
             )}
           </div>
@@ -281,7 +357,7 @@ function ChatContent() {
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-white"><Loader2 className="animate-spin text-blue-500" size={48} /></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-black text-white"><Loader2 className="animate-spin text-blue-500" size={48} /></div>}>
       <ChatContent />
     </Suspense>
   );
