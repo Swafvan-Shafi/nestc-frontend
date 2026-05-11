@@ -134,7 +134,7 @@ function ChatContent() {
         id: c.id,
         name: c.other_user_name || 'Student',
         sellerId: c.other_user_id,
-        listingId: c.listing_id,
+        listing_id: c.listing_id,
         chatSellerId: c.chat_seller_id,
         lastMessage: c.last_message,
         time: c.last_message_time ? new Date(c.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now',
@@ -145,13 +145,13 @@ function ChatContent() {
       console.log('--- CONVERSATIONS FETCHED ---', conversationList);
       setChats(conversationList);
 
-      // Enhanced uniqueness: check for seller AND listing
+      // Check for existing chat for this SPECIFIC product
       const existingProductChat = conversationList.find((c: any) => 
         (c.sellerId === sellerId || c.chatSellerId === sellerId) && c.listing_id === urlListingId
       );
 
-      if (sellerId && !existingProductChat) {
-        console.log('--- CREATING TEMP CHAT ---');
+      if (sellerId && urlListingId && !existingProductChat) {
+        console.log('--- CREATING NEW PRODUCT CHAT ---');
         try {
           const sellerRes = await axios.get(`${BASE_URL}/auth/users/${sellerId}`, {
             headers: { Authorization: `Bearer ${token}` }
@@ -159,7 +159,7 @@ function ChatContent() {
           const seller = sellerRes.data;
           
           const newChat = {
-            id: `temp_${sellerId}`,
+            id: `temp_${sellerId}_${urlListingId.substring(0, 8)}`,
             name: seller.name || 'Student',
             lastMessage: 'Starting a new conversation...',
             time: 'Now',
@@ -170,14 +170,17 @@ function ChatContent() {
           };
           setChats(prev => [newChat, ...prev]);
           setActiveChat(newChat);
+          activeChatRef.current = newChat;
         } catch (e) {
           console.error('Failed to fetch seller name:', e);
         }
       } else if (existingProductChat) {
-        console.log('--- OPENING EXISTING CHAT ---', existingProductChat);
+        console.log('--- OPENING EXISTING PRODUCT CHAT ---', existingProductChat);
         setActiveChat(existingProductChat);
+        activeChatRef.current = existingProductChat;
       } else if (!activeChat && conversationList.length > 0) {
         setActiveChat(conversationList[0]);
+        activeChatRef.current = conversationList[0];
       }
     } catch (err) {
       setErrorMsg('Failed to load chats.');
@@ -425,11 +428,11 @@ function ChatContent() {
                       }
 
                       const product = productDataCache[lId];
-                      const photoUrl = product?.photos?.[0] || product?.photo || product?.imageUrl || product?.photo_url;
+                      const photoUrl = product?.photos?.[0] || product?.photo || product?.imageUrl || product?.photo_url || product?.image_url;
                       
                       return (
                         <motion.div 
-                          key={msg.id}
+                          key={msg.id || `msg-${i}`}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-4`}
