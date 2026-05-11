@@ -17,7 +17,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 const NITC_BOUNDS = '75.9200,11.3100,75.9500,11.3300'; // lon1,lat1,lon2,lat2
 
-export function MapPicker({ onSelect }: { onSelect: (addr: string) => void }) {
+export function MapPicker({ onSelect }: { onSelect: (addr: string, lat: number, lng: number) => void }) {
   const MapEvents = () => {
     useMapEvents({
       click: async (e) => {
@@ -25,9 +25,9 @@ export function MapPicker({ onSelect }: { onSelect: (addr: string) => void }) {
         try {
           const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=en&viewbox=${NITC_BOUNDS}&bounded=1`);
           const data = await res.json();
-          onSelect(data.display_name);
+          onSelect(data.display_name, lat, lng);
         } catch (err) {
-          onSelect(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+          onSelect(`${lat.toFixed(4)}, ${lng.toFixed(4)}`, lat, lng);
         }
       },
     });

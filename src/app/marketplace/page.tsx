@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Plus, Clock, Tag, MessageCircle, AlertCircle, ShoppingCart, DollarSign, User, RefreshCw, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
@@ -28,15 +28,13 @@ export default function MarketplacePage() {
   }, []);
 
   const fetchListings = async () => {
-    setLoading(true);
+    if (listings.length === 0) setLoading(true);
     try {
       const token = localStorage.getItem('nestc_token');
       
       const res = await axios.get(`${API_URL}/marketplace/listings`, {
         params: {
           type: 'Have',
-          category: activeCategory,
-          urgent: showUrgentOnly,
           status: 'active' // Ensure public shop only shows active
         },
         headers: {
@@ -53,11 +51,16 @@ export default function MarketplacePage() {
 
   useEffect(() => {
     fetchListings();
-  }, [activeCategory, showUrgentOnly]);
+  }, []); // Fetch once on mount
 
-  const filteredListings = listings.filter(listing => 
-    listing.title.toLowerCase().includes(searchQuery.toLowerCase())
-  ).sort((a, b) => (b.is_urgent ? 1 : 0) - (a.is_urgent ? 1 : 0));
+  const filteredListings = useMemo(() => {
+    return listings.filter(listing => {
+      const matchesSearch = listing.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = activeCategory === 'All' || listing.category === activeCategory;
+      const matchesUrgent = !showUrgentOnly || listing.is_urgent;
+      return matchesSearch && matchesCategory && matchesUrgent;
+    }).sort((a, b) => (b.is_urgent ? 1 : 0) - (a.is_urgent ? 1 : 0));
+  }, [listings, searchQuery, activeCategory, showUrgentOnly]);
 
   return (
     <div className="min-h-screen">

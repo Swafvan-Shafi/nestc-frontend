@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Car, MapPin, Navigation, CheckCircle2, Loader2, MessageCircle, ShieldCheck, Locate, X, Navigation2, QrCode, Search, ExternalLink, RefreshCw, Map as MapIcon } from 'lucide-react';
+import { Car, MapPin, Navigation, CheckCircle2, Loader2, MessageCircle, ShieldCheck, Locate, X, Navigation2, QrCode, Search, ExternalLink, RefreshCw, Map as MapIcon, User } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import axios from 'axios';
 import dynamic from 'next/dynamic';
@@ -35,8 +35,7 @@ export default function BookPage() {
   const [currentDriverIndex, setCurrentDriverIndex] = useState(0);
   const [activeBooking, setActiveBooking] = useState<any>(null);
   const [isLocating, setIsLocating] = useState(false);
-  const [showMap, setShowMap] = useState(false);
-  const [showCampusMap, setShowCampusMap] = useState(false);
+  const [activeMapField, setActiveMapField] = useState<'pickup' | 'destination' | null>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [pickupSuggestions, setPickupSuggestions] = useState<any[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -238,7 +237,7 @@ export default function BookPage() {
     }, (err) => {
       setIsLocating(false);
       if (err.code === err.PERMISSION_DENIED) {
-        setToastMessage('Location permission denied. Please allow location access in your browser settings.');
+        setToastMessage('Location permission denied. Please select from map or type manually.');
       } else if (err.code === err.POSITION_UNAVAILABLE) {
         setToastMessage('Device location is turned off.');
       } else {
@@ -258,33 +257,30 @@ export default function BookPage() {
       <PageHeader title="Book a Ride" subtitle="Secure Automated Dispatch" />
 
       <AnimatePresence>
-        {showCampusMap && (
+        {activeMapField && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#111] border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl"
+              className="bg-[#111] border border-white/10 rounded-3xl p-6 w-full max-w-2xl shadow-2xl"
             >
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon className="text-blue-500" /> NITC Campus Places</h3>
-                <button onClick={() => setShowCampusMap(false)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-all"><X size={20} /></button>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <MapIcon className="text-blue-500" /> Select {activeMapField === 'pickup' ? 'Pickup' : 'Destination'}
+                </h3>
+                <button onClick={() => setActiveMapField(null)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-all"><X size={20} /></button>
               </div>
-              <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                {NIT_CAMPUS_PLACES.map((place) => (
-                  <button
-                    key={place}
-                    onClick={() => {
-                      setFormData(prev => ({ ...prev, pickup: place }));
-                      setShowCampusMap(false);
-                    }}
-                    className="p-4 bg-white/5 hover:bg-blue-600/20 hover:border-blue-500/50 border border-white/5 rounded-2xl text-sm font-bold text-gray-300 hover:text-white transition-all text-left flex flex-col gap-2"
-                  >
-                    <MapPin size={16} className="text-blue-500" />
-                    {place}
-                  </button>
-                ))}
-              </div>
+              <MapPicker 
+                onSelect={(addr, lat, lng) => {
+                  if (activeMapField === 'pickup') {
+                    setFormData(prev => ({ ...prev, pickup: addr, pickupLat: lat, pickupLng: lng }));
+                  } else {
+                    setFormData(prev => ({ ...prev, destination: addr }));
+                  }
+                  setActiveMapField(null);
+                }} 
+              />
             </motion.div>
           </div>
         )}
@@ -310,9 +306,9 @@ export default function BookPage() {
                 <div className="relative flex flex-col sm:block">
                   <button 
                     type="button"
-                    onClick={() => setShowCampusMap(true)}
+                    onClick={() => setActiveMapField('pickup')}
                     className="absolute left-4 sm:left-5 top-[1.5rem] sm:top-1/2 -translate-y-1/2 text-blue-500 hover:text-white transition-all z-10 p-2 -ml-2 rounded-lg hover:bg-blue-600/20"
-                    title="Select Campus Place"
+                    title="Select on Map"
                   >
                     <MapIcon size={18} />
                   </button>
@@ -347,7 +343,14 @@ export default function BookPage() {
               <div className="group relative">
                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 ml-2">Destination</label>
                 <div className="relative flex flex-col sm:block">
-                  <div className="absolute left-4 sm:left-5 top-[1.5rem] sm:top-1/2 -translate-y-1/2 text-emerald-500"><MapPin size={18} /></div>
+                  <button 
+                    type="button"
+                    onClick={() => setActiveMapField('destination')}
+                    className="absolute left-4 sm:left-5 top-[1.5rem] sm:top-1/2 -translate-y-1/2 text-emerald-500 hover:text-white transition-all z-10 p-2 -ml-2 rounded-lg hover:bg-emerald-600/20"
+                    title="Select on Map"
+                  >
+                    <MapIcon size={18} />
+                  </button>
                   <input 
                     type="text" 
                     placeholder="Type destination..."
@@ -359,14 +362,8 @@ export default function BookPage() {
 
               </div>
 
-              {showMap && <MapPicker key="picker" onSelect={(addr) => { setFormData(prev => ({ ...prev, destination: addr })); setShowMap(false); }} />}
-              
-              {!showMap && formData.pickupLat && formData.pickupLng && (
-                <div className="mt-4" />
-              )}
-
               <button type="submit" disabled={status !== 'idle'} className="w-full py-6 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl transition-all flex items-center justify-center gap-3 disabled:opacity-30">
-                Find Nearest Free Driver <Car size={20} />
+                Find Drivers <Car size={20} />
               </button>
             </form>
           </div>
@@ -375,28 +372,33 @@ export default function BookPage() {
              <AnimatePresence mode="wait">
                 {status === 'idle' && (
                   <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                     <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10"><ShieldCheck size={40} className="text-gray-700" /></div>
-                     <h3 className="text-xl font-black text-white/40 uppercase tracking-widest">NITC Dispatcher</h3>
-                     <p className="text-[10px] text-gray-600 font-bold uppercase tracking-[0.3em] mt-2">Verified Campus Logistics</p>
+                     <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10"><Car size={40} className="text-gray-700" /></div>
+                     <h3 className="text-xl font-black text-white/40 uppercase tracking-widest">Ready to Ride</h3>
+                     <p className="text-[10px] text-gray-600 font-bold uppercase tracking-[0.3em] mt-2">Enter pickup and destination</p>
                   </motion.div>
                 )}
 
-                {status === 'requesting' && (
-                  <motion.div key="requesting" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full space-y-8">
+                {status === 'searching' && (
+                  <motion.div key="searching" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full space-y-8">
                      <div className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 flex flex-col items-center text-center">
                         <div className="w-20 h-20 bg-blue-600/10 rounded-full flex items-center justify-center text-blue-500 mb-6 border border-blue-600/20">
                            <Loader2 size={32} className="animate-spin" />
                         </div>
-                        <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">Request Broadcasted</h3>
-                        <p className="text-sm text-gray-400 max-w-xs mx-auto mb-8">
-                           We have sent WhatsApp notifications to all free drivers. Waiting for someone to accept...
+                        <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">Searching...</h3>
+                        <p className="text-sm text-gray-400 max-w-xs mx-auto mb-6">
+                           Contacting nearby drivers...
                         </p>
                         
-                        <div className="flex items-center justify-center gap-3 px-6 py-3 bg-blue-600/5 rounded-2xl border border-blue-600/10">
-                           <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                           <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">
-                              Monitoring Driver Responses
-                           </p>
+                        <div className="w-full text-left space-y-2 mt-4 w-full">
+                           <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 text-center">Free Drivers Nearby</p>
+                           <div className="max-h-48 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                             {suggestedDrivers.map((d, i) => (
+                               <div key={i} className="flex justify-between items-center p-3 bg-black/40 rounded-xl border border-white/5 text-sm text-gray-300">
+                                 <span className="font-bold flex items-center gap-2"><User size={14} className="text-blue-500" /> {d.name}</span>
+                                 <span className="font-mono text-emerald-400">{d.phone}</span>
+                               </div>
+                             ))}
+                           </div>
                         </div>
                      </div>
                   </motion.div>
@@ -407,8 +409,10 @@ export default function BookPage() {
                      <div className="p-10 bg-emerald-600/10 rounded-[3rem] border border-emerald-600/20">
                         <div className="w-20 h-20 bg-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl"><CheckCircle2 size={40} className="text-white" /></div>
                         <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Ride Confirmed!</h2>
-                        <div className="my-8 p-6 bg-black/40 rounded-3xl border border-white/5 space-y-3">
+                        <div className="my-8 p-6 bg-black/40 rounded-3xl border border-white/5 space-y-3 text-left">
                            <div className="flex justify-between text-[10px] font-black"><span className="text-gray-600 uppercase">Code</span><span className="text-white uppercase">{activeBooking?.booking_code || 'NITC-RIDE'}</span></div>
+                           <div className="flex justify-between text-[10px] font-black"><span className="text-gray-600 uppercase">Driver</span><span className="text-white uppercase">{activeBooking?.driver_name || 'Assigned Driver'}</span></div>
+                           <div className="flex justify-between text-[10px] font-black"><span className="text-gray-600 uppercase">Phone</span><span className="text-emerald-500 uppercase">{activeBooking?.driver_phone || '+91 0000000000'}</span></div>
                            <div className="flex justify-between text-[10px] font-black"><span className="text-gray-600 uppercase">Status</span><span className="text-emerald-500 uppercase">Driver En Route</span></div>
                         </div>
                         <Link href={`/gate-pass/${activeBooking?.id || activeBooking?.booking_code}`} className="w-full py-5 bg-white text-black hover:bg-gray-200 rounded-2xl font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3">Digital Gate Pass <QrCode size={20} /></Link>

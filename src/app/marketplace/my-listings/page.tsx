@@ -48,37 +48,44 @@ export default function MyListingsPage() {
     }
   };
 
-  const handleUpdateStatus = async (id: string, newStatus: string) => {
-    if (!confirm(`Are you sure you want to mark this item as ${newStatus}?`)) return;
-    
-    setActionLoading(id);
-    try {
-      const token = localStorage.getItem('nestc_token');
-      await axios.patch(`${API_URL}/marketplace/listings/${id}/status`, { status: newStatus }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setListings(prev => prev.map(l => l.id === id ? { ...l, status: newStatus } : l));
-    } catch (err) {
-      console.error('Failed to update status:', err);
-      alert('Failed to update status. Please try again.');
-    } finally {
-      setActionLoading(null);
-    }
+  type ConfirmAction = {
+    type: 'sold' | 'purchased' | 'delete';
+    id: string;
+  };
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmAction | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const handleUpdateStatus = (id: string, newStatus: string) => {
+    setConfirmDialog({ type: newStatus as 'sold' | 'purchased', id });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
+  const handleDelete = (id: string) => {
+    setConfirmDialog({ type: 'delete', id });
+  };
+
+  const confirmAction = async () => {
+    if (!confirmDialog) return;
+    const { type, id } = confirmDialog;
     
     setActionLoading(id);
+    setActionError(null);
     try {
       const token = localStorage.getItem('nestc_token');
-      await axios.delete(`${API_URL}/marketplace/listings/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setListings(prev => prev.filter(l => l.id !== id));
+      if (type === 'delete') {
+        await axios.delete(`${API_URL}/marketplace/listings/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setListings(prev => prev.filter(l => l.id !== id));
+      } else {
+        await axios.patch(`${API_URL}/marketplace/listings/${id}/status`, { status: type }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setListings(prev => prev.map(l => l.id === id ? { ...l, status: type } : l));
+      }
+      setConfirmDialog(null);
     } catch (err) {
-      console.error('Failed to delete listing:', err);
-      alert('Failed to delete listing');
+      console.error('Action failed:', err);
+      setActionError('Action failed. Please try again.');
     } finally {
       setActionLoading(null);
     }
@@ -240,6 +247,62 @@ export default function MyListingsPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      <AnimatePresence>
+        {confirmDialog && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0a0a0b]/40 backdrop-blur-sm p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#121214] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative"
+            >
+              <h3 className="text-white font-bold text-lg mb-2">Confirm Action</h3>
+              <p className="text-gray-400 text-sm mb-6">
+                {confirmDialog.type === 'sold' && "Mark this item as sold?"}
+                {confirmDialog.type === 'purchased' && "Mark this request as purchased?"}
+                {confirmDialog.type === 'delete' && "Delete this item permanently?"}
+              </p>
+              
+              {actionError && (
+                <div className="mb-4 text-center text-red-500 font-bold text-xs bg-red-500/10 py-2 rounded-lg">
+                  {actionError}
+                </div>
+              )}
+              
+              <div className="flex gap-3">
+                <button 
+                  disabled={actionLoading !== null}
+                  onClick={() => {
+                    setConfirmDialog(null);
+                    setActionError(null);
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white transition-all font-bold text-sm disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button 
+                  disabled={actionLoading !== null}
+                  onClick={confirmAction}
+                  className={`flex-1 py-3 rounded-xl transition-all font-bold text-sm disabled:opacity-50 ${
+                    confirmDialog.type === 'delete' ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                  }`}
+                >
+                  {actionLoading !== null ? 'Processing...' : (
+                    confirmDialog.type === 'sold' ? 'Confirm Sold' :
+                    confirmDialog.type === 'purchased' ? 'Confirm Purchased' : 'Delete'
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

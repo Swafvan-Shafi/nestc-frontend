@@ -12,8 +12,8 @@ const allHostels = [
   { id: 'C Hostel', gender: 'male', location: 'Common Room Area' },
   { id: 'D Hostel', gender: 'male', location: 'Study Hall Wing' },
   { id: 'E Hostel', gender: 'male', location: 'Near Warden Office' },
-  { id: 'F Hostel', gender: 'male', location: 'Entrance Gate' },
-  { id: 'G Hostel', gender: 'male', location: 'Lobby' },
+  { id: 'F Hostel', gender: 'female', location: 'Entrance Gate' },
+  { id: 'G Hostel', gender: 'female', location: 'Lobby' },
   { id: 'Old Mega', gender: 'male', location: 'Tower 1 Reception' },
   { id: 'LH 1', gender: 'female', location: 'Main Entrance' },
   { id: 'LH 2', gender: 'female', location: 'Dining Hall' },
@@ -40,15 +40,25 @@ export default function VendingPage() {
 
   useEffect(() => {
     const savedUser = localStorage.getItem('nestc_user');
+    let userHostels = allHostels;
+    
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
-      setFilteredHostels(allHostels);
-      setSelectedHostelId(allHostels[0]?.id || '');
+      
+      const gender = parsedUser.gender?.toLowerCase();
+      if (gender === 'male' || gender === 'm') {
+        userHostels = allHostels.filter(h => h.gender !== 'female');
+      } else if (gender === 'female' || gender === 'f') {
+        userHostels = allHostels.filter(h => h.gender === 'female');
+      }
     }
+    
+    setFilteredHostels(userHostels);
+    setSelectedHostelId(userHostels[0]?.id || '');
   }, []);
 
-  const currentHostel = allHostels.find(h => h.id === selectedHostelId);
+  const currentHostel = filteredHostels.find(h => h.id === selectedHostelId);
   
   // Show all items to show the empty slots as well
   const availableItems = mockItems;
@@ -129,33 +139,27 @@ export default function VendingPage() {
           </div>
         </section>
 
-        <section className="space-y-8">
+        <section className="space-y-6">
           <div className="flex justify-between items-end">
-             <h2 className="text-3xl font-bold text-white tracking-tight">Available Items</h2>
-             <span className="text-xs font-bold text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full">{availableItems.length} Products Available</span>
+             <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Available Items</h2>
           </div>
           {availableItems.length > 0 ? (
-            <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4 pb-20">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 pb-20 w-full">
               {mockItems.map((item) => (
                 <div 
                   key={item.id} 
-                  className={`glass-card p-2 sm:p-4 flex flex-col items-center justify-between text-center border-white/10 ${item.stock === 0 ? 'opacity-60' : 'hover:border-blue-500/30'} transition-all`}
+                  className={`glass-card p-3 sm:p-4 flex flex-col items-center justify-between text-center border-white/10 ${item.stock === 0 ? 'opacity-60' : 'hover:border-blue-500/30'} transition-all w-full`}
                 >
-                  <img src={item.image} alt={item.name} className="w-12 h-12 sm:w-16 sm:h-16 object-contain mb-2" />
-                  <h3 className="text-[10px] sm:text-xs font-bold text-white leading-tight mb-1 line-clamp-2 h-[28px] sm:h-[32px]">{item.name}</h3>
-                  <p className="text-[10px] sm:text-xs text-blue-400 font-black mb-1">₹{item.price}</p>
+                  <img src={item.image} alt={item.name} className="w-16 h-16 sm:w-20 sm:h-20 object-contain mb-3" />
+                  <h3 className="text-xs font-bold text-white leading-tight mb-1 line-clamp-2">{item.name}</h3>
+                  <p className="text-xs text-blue-400 font-black mb-2">₹{item.price}</p>
                   
-                  <div className="flex flex-col items-center gap-1 mb-2">
-                    <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest ${
-                      item.stock === 0 ? 'text-red-500' : item.stock < 5 ? 'text-yellow-500' : 'text-emerald-500'
-                    }`}>
-                      {item.stock === 0 ? 'Out' : item.stock < 5 ? 'Low' : 'Available'}
-                    </span>
-                    <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold">{item.stock} left</span>
+                  <div className="flex items-center gap-1 mb-3">
+                    <span className="text-[10px] text-gray-400 font-bold">{item.stock} left</span>
                   </div>
                   
-                  <button className="w-full py-1.5 sm:py-2 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1">
-                    <Bell size={10} /> Notify
+                  <button className="w-full py-2 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1">
+                    <Bell size={12} /> Notify
                   </button>
                 </div>
               ))}
