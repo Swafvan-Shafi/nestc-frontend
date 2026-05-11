@@ -69,7 +69,7 @@ export default function MarketplacePage() {
         subtitle="Live Campus Trade" 
         action={
           <div className="flex items-center">
-             <Link href="/marketplace/post" className="p-3 bg-blue-600/10 text-blue-500 hover:bg-blue-600 hover:text-white rounded-xl transition-all shadow-lg flex items-center justify-center">
+             <Link href="/marketplace/post" prefetch={false} className="p-3 bg-blue-600/10 text-blue-500 hover:bg-blue-600 hover:text-white rounded-xl transition-all shadow-lg flex items-center justify-center">
                 <Plus size={20} />
              </Link>
           </div>
@@ -100,6 +100,7 @@ export default function MarketplacePage() {
 
           <Link 
              href="/marketplace/my-listings" 
+             prefetch={false}
              title="Manage My Shop"
              className="p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-gray-400 hover:text-white transition-all flex items-center justify-center shrink-0 shadow-lg"
           >
@@ -108,7 +109,7 @@ export default function MarketplacePage() {
         </div>
 
         <div className="flex mb-6">
-          <Link href="/marketplace/requests" className="w-full p-4 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 rounded-2xl text-emerald-500 transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/5">
+          <Link href="/marketplace/requests" prefetch={false} className="w-full p-4 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 rounded-2xl text-emerald-500 transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/5">
              <Tag size={18} /> View Request List
           </Link>
         </div>
@@ -180,7 +181,7 @@ export default function MarketplacePage() {
                         <MessageCircle size={22} />
                       </button>
                     ) : (
-                      <Link href="/marketplace/my-listings" className="text-[9px] font-black uppercase text-blue-500 tracking-widest hover:underline transition-all">Edit Listing</Link>
+                      <Link href="/marketplace/my-listings" prefetch={false} className="text-[9px] font-black uppercase text-blue-500 tracking-widest hover:underline transition-all">Edit Listing</Link>
                     )}
                   </div>
                 </div>

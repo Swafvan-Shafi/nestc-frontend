@@ -61,7 +61,7 @@ export default function RequestListPage() {
              <button onClick={fetchRequests} className="p-2 sm:p-3 bg-white/5 rounded-xl text-gray-500 hover:text-white transition-all">
                 <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
              </button>
-             <Link href="/marketplace/post" className="btn-primary flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 text-xs shadow-lg shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-500 border-none">
+             <Link href="/marketplace/post" prefetch={false} className="btn-primary flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 text-xs shadow-lg shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-500 border-none">
                 <Plus size={18} /> <span className="hidden sm:inline">Post Request</span>
              </Link>
           </div>
@@ -143,7 +143,7 @@ export default function RequestListPage() {
                          <MessageCircle size={22} />
                       </button>
                     ) : (
-                      <Link href="/marketplace/my-listings" className="text-[9px] font-black uppercase text-emerald-500 tracking-widest hover:underline transition-all">Manage</Link>
+                      <Link href="/marketplace/my-listings" prefetch={false} className="text-[9px] font-black uppercase text-emerald-500 tracking-widest hover:underline transition-all">Manage</Link>
                     )}
                   </div>
                 </div>
