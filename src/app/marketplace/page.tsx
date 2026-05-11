@@ -191,7 +191,10 @@ export default function MarketplacePage() {
                     {currentUser?.id !== listing.seller_id ? (
                       <button 
                         type="button"
-                        onClick={() => router.push(`/chat?sellerId=${listing.seller_id}&listingId=${listing.id}`)}
+                        onClick={() => {
+                          const imgParam = listing.photos?.[0] ? `&img=${encodeURIComponent(listing.photos[0])}` : '';
+                          router.push(`/chat?sellerId=${listing.seller_id}&listingId=${listing.id}&title=${encodeURIComponent(listing.title)}&price=${listing.price}${imgParam}`);
+                        }}
                         className="p-3 bg-white/5 rounded-xl transition-all hover:bg-blue-600 text-blue-500 hover:text-white"
                       >
                         <MessageCircle size={22} />

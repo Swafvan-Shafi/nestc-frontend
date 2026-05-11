@@ -2,7 +2,7 @@
 
 import PageHeader from '@/components/PageHeader';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Send, User, Clock, Check, Loader2, ImageIcon, CheckCircle, Tag, ShoppingBag, ExternalLink, Image as ImagePlaceholder, AlertCircle, X } from 'lucide-react';
+import { MessageSquare, Send, User, Clock, Check, Loader2, ImageIcon, CheckCircle, Tag, ShoppingBag, ExternalLink, Image as ImagePlaceholder, AlertCircle, X, ChevronLeft, RefreshCw } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -15,6 +15,9 @@ function ChatContent() {
   const searchParams = useSearchParams();
   const sellerId = searchParams.get('sellerId');
   const urlListingId = searchParams.get('listingId');
+  const urlImg = searchParams.get('img');
+  const urlTitle = searchParams.get('title');
+  const urlPrice = searchParams.get('price');
   
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
@@ -25,8 +28,10 @@ function ChatContent() {
   const [isSocketReady, setIsSocketReady] = useState(false);
   const [productDataCache, setProductDataCache] = useState<Record<string, any>>({});
   
-  const [showNotification, setShowNotification] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const socketRef = useRef<Socket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeChatRef = useRef<any>(null);
@@ -36,111 +41,39 @@ function ChatContent() {
     activeChatRef.current = activeChat;
   }, [activeChat]);
 
-  const [isConnected, setIsConnected] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const fetchProductPreview = useCallback(async (lId: string) => {
-    if (!lId || lId === 'null' || lId === 'undefined') return;
-    if (productDataCache[lId]) return;
-    
-    try {
-      console.log('[CHAT DEBUG] Fetching product preview for:', lId);
-      const token = localStorage.getItem('nestc_token');
-      const res = await axios.get(`${BASE_URL}/marketplace/listings/${lId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('[CHAT DEBUG] Product preview fetched:', res.data);
-      setProductDataCache(prev => ({ ...prev, [lId]: res.data }));
-    } catch (e) {
-      console.error('[CHAT DEBUG] Failed to fetch product preview for:', lId, e);
-    }
-  }, [productDataCache]);
-
-  const handleRefresh = async () => {
-    if (!user?.id) return;
-    setIsRefreshing(true);
-    await fetchConversations(user.id);
-    if (activeChat?.id) {
-      await fetchMessages(activeChat.id);
-    }
-    setIsRefreshing(false);
-  };
-
   const formatImageUrl = (url: string) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
     return `${BASE_URL.replace('/api/v1', '')}${url}`;
   };
 
-  useEffect(() => {
-    const missingIds = messages
-      .filter(msg => msg.content?.startsWith('PRODUCT_ENQUIRY:'))
-      .map(msg => msg.content.split(':')[1])
-      .filter(lId => lId && lId !== 'null' && !productDataCache[lId]);
-    
-    if (missingIds.length > 0) {
-      // Remove duplicates
-      const uniqueIds = Array.from(new Set(missingIds));
-      uniqueIds.forEach(id => fetchProductPreview(id));
-    }
-  }, [messages]); // Only depend on messages to avoid loops
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem('nestc_user');
-    if (savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-      setUser(parsedUser);
-      
-      const socket = io(SOCKET_URL);
-      socketRef.current = socket;
-
-      socket.on('connect', () => {
-        setIsSocketReady(true);
-        socket.emit('register_user', parsedUser.id);
+  const fetchProductPreview = useCallback(async (lId: string) => {
+    if (!lId || lId === 'null' || lId === 'undefined') return;
+    if (productDataCache[lId]) return;
+    try {
+      const token = localStorage.getItem('nestc_token');
+      const res = await axios.get(`${BASE_URL}/marketplace/listings/${lId}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-
-      socket.on('new_message', (data) => {
-        const currentActive = activeChatRef.current;
-        console.log('--- SOCKET: new_message ---', data);
-        
-        const isFromMe = data.message.sender_id === parsedUser.id;
-        
-        // Handle temp chat migration
-        if (currentActive?.isTemp && isFromMe) {
-           console.log('Migrating temp chat to real chat:', data.chatId);
-           const realChat = { ...currentActive, id: data.chatId, isTemp: false };
-           setActiveChat(realChat);
-           activeChatRef.current = realChat; // Update ref immediately
-        }
-
-        const isMatch = (activeChatRef.current && (
-          data.chatId === activeChatRef.current.id || 
-          data.message.chat_id === activeChatRef.current.id
-        )) || (currentActive?.isTemp && isFromMe);
-
-        if (isMatch) {
-          setMessages((prev) => {
-             // Avoid duplicates
-             if (prev.find(m => m.id === data.message.id)) return prev;
-             return [...prev, data.message];
-          });
-          
-          // Force scroll to bottom
-          setTimeout(() => {
-            scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-          }, 100);
-        }
-        fetchConversations(parsedUser.id);
-      });
-
-      fetchConversations(parsedUser.id);
+      setProductDataCache(prev => ({ ...prev, [lId]: res.data }));
+    } catch (e) {
+      console.error('Failed to fetch product:', e);
     }
+  }, [productDataCache]);
 
-    return () => {
-      socketRef.current?.off('new_message');
-      socketRef.current?.disconnect();
-    };
-  }, []);
+  const fetchMessages = async (chatId: string) => {
+    try {
+      const token = localStorage.getItem('nestc_token');
+      const res = await axios.get(`${BASE_URL}/chat/messages/${chatId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMessages(Array.isArray(res.data) ? res.data : []);
+    } catch (err: any) {
+      if (!chatId.startsWith('temp_') && !chatId.startsWith('p2p_')) {
+        setErrorMsg('History could not be loaded.');
+      }
+    }
+  };
 
   const fetchConversations = async (userId: string) => {
     try {
@@ -149,11 +82,11 @@ function ChatContent() {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      const conversationList = res.data.map((c: any) => ({
+      const list = res.data.map((c: any) => ({
         id: c.id,
         name: c.other_user_name || 'Student',
         sellerId: c.other_user_id,
-        listingId: c.listing_id, // Map snake_case to camelCase
+        listingId: c.listing_id,
         chatSellerId: c.chat_seller_id,
         lastMessage: c.last_message,
         time: c.last_message_time ? new Date(c.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now',
@@ -161,425 +94,243 @@ function ChatContent() {
         isTemp: false
       }));
       
-      console.log('--- CONVERSATIONS FETCHED ---', conversationList);
-      setChats(conversationList);
+      setChats(list);
 
-      // Check for existing chat for this SPECIFIC product
-      const existingProductChat = conversationList.find((c: any) => 
+      // Link handle existing product chat
+      const existing = list.find((c: any) => 
         (c.sellerId === sellerId || c.chatSellerId === sellerId) && c.listingId === urlListingId
       );
 
-      if (sellerId && urlListingId && !existingProductChat) {
-        console.log('--- CREATING NEW PRODUCT CHAT ---');
-        try {
-          const sellerRes = await axios.get(`${BASE_URL}/auth/users/${sellerId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const seller = sellerRes.data;
-          
-          // Generate the SAME ID as the backend
-          const ids = [userId, sellerId].sort();
-          const baseId = `p2p_${ids[0].substring(0, 8)}_${ids[1].substring(0, 8)}`;
-          const deterministicId = `${baseId}_${urlListingId.substring(0, 8)}`;
+      if (sellerId && urlListingId && !existing) {
+        // Create DETERMINISTIC ID for instant loading
+        const ids = [userId, sellerId].sort();
+        const baseId = `p2p_${ids[0].substring(0, 8)}_${ids[1].substring(0, 8)}`;
+        const detId = `${baseId}_${urlListingId.substring(0, 8)}`;
 
-          const newChat = {
-            id: deterministicId,
-            name: seller.name || 'Student',
-            lastMessage: 'Starting a new conversation...',
-            time: 'Now',
-            sellerId: sellerId,
-            listingId: urlListingId,
-            unreadCount: 0,
-            isTemp: true
-          };
-          setChats(prev => [newChat, ...prev]);
-          setActiveChat(newChat);
-          activeChatRef.current = newChat;
-        } catch (e) {
-          console.error('Failed to fetch seller name:', e);
-        }
-      } else if (existingProductChat) {
-        console.log('--- OPENING EXISTING PRODUCT CHAT ---', existingProductChat);
-        setActiveChat(existingProductChat);
-        activeChatRef.current = existingProductChat;
-      } else if (!activeChat && conversationList.length > 0) {
-        setActiveChat(conversationList[0]);
-        activeChatRef.current = conversationList[0];
+        const newChat = {
+          id: detId,
+          name: 'Loading Student...',
+          sellerId: sellerId,
+          listingId: urlListingId,
+          isTemp: true,
+          time: 'Now'
+        };
+        setActiveChat(newChat);
+
+        // Fetch seller info
+        axios.get(`${BASE_URL}/auth/users/${sellerId}`, {
+           headers: { Authorization: `Bearer ${token}` }
+        }).then(res => {
+           setActiveChat((prev: any) => prev?.id === detId ? { ...prev, name: res.data.name } : prev);
+        });
+      } else if (existing) {
+        setActiveChat(existing);
       }
     } catch (err) {
-      setErrorMsg('Failed to load chats.');
-      console.error('Failed to load chats:', err);
+      console.error('Failed to load conversations:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchMessages = async (chatId: string) => {
-    try {
-      const token = localStorage.getItem('nestc_token');
-      const res = await axios.get(`${BASE_URL}/chat/messages/${chatId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('[CHAT DEBUG] Messages fetched:', res.data);
-      const fetchedMessages = Array.isArray(res.data) ? res.data : [];
-      setMessages(fetchedMessages);
-    } catch (err: any) {
-      console.error('Fetch messages failed:', err);
-      // Don't show error for temp/new chats
-      if (!chatId.startsWith('temp_')) {
-        setErrorMsg('Could not load chat history.');
-      }
-    }
-  };
-
   useEffect(() => {
-    // If we have a listingId in URL, pre-populate the cache if we can
-    if (urlListingId && !productDataCache[urlListingId]) {
-      fetchProductPreview(urlListingId);
-    }
-  }, [urlListingId]);
-
-  useEffect(() => {
-    // Aggressive Auto-Enquiry
-    if (activeChat && urlListingId && isSocketReady && hasSentAutoEnquiry.current !== urlListingId) {
-      sendAutoEnquiry();
-    }
-  }, [activeChat?.id, urlListingId, isSocketReady]);
-
-  const sendAutoEnquiry = async () => {
-    if (!urlListingId || !activeChat || !user) return;
-    try {
-      const content = `PRODUCT_ENQUIRY:${urlListingId}:Hi, I'm interested in this product. Is it still available?`;
+    const savedUser = localStorage.getItem('nestc_user');
+    if (savedUser) {
+      const parsedUser = JSON.parse(savedUser);
+      setUser(parsedUser);
       
-      // Optimistic update for the enquiry
-      const tempMsg = {
-        id: 'temp_enquiry_' + Date.now(),
-        chat_id: activeChat.id,
-        sender_id: user.id,
-        content: content,
-        created_at: new Date().toISOString(),
-        is_sending: true
-      };
-      setMessages(prev => [...prev, tempMsg]);
+      const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
+      socketRef.current = socket;
 
-      socketRef.current?.emit('send_message', {
-        chatId: activeChat.id,
-        senderId: user.id,
-        receiverId: activeChat.sellerId,
-        content: content,
-        listingId: urlListingId
+      socket.on('connect', () => {
+        setIsConnected(true);
+        setIsSocketReady(true);
+        socket.emit('register_user', parsedUser.id);
       });
 
-      hasSentAutoEnquiry.current = urlListingId;
-      setActiveChat((prev: any) => ({ ...prev, isTemp: false }));
-    } catch (e) {
-      console.error('Failed to send auto-enquiry:', e);
+      socket.on('new_message', (data) => {
+        const currentActive = activeChatRef.current;
+        const isFromMe = data.message.sender_id === parsedUser.id;
+        
+        const isMatch = (currentActive?.id === data.chatId) || 
+                        (currentActive?.id === data.message.chat_id);
+
+        if (isMatch) {
+          setMessages(prev => {
+            if (prev.some(m => m.id === data.message.id)) return prev;
+            return [...prev, data.message];
+          });
+        }
+        fetchConversations(parsedUser.id);
+      });
+
+      fetchConversations(parsedUser.id);
     }
-  };
+    return () => { socketRef.current?.disconnect(); };
+  }, []);
 
   useEffect(() => {
-    if (activeChat && !activeChat.isTemp) {
-      // Only fetch history if we don't have it or if we switched to a different REAL chat
-      // This prevents the "disappearing message" race condition
+    if (activeChat?.id) {
       fetchMessages(activeChat.id);
       socketRef.current?.emit('join_chat', activeChat.id);
-      
-      if (activeChat.unreadCount > 0) {
-        handleMarkRead(activeChat.id);
-      }
     }
-  }, [activeChat?.id, activeChat?.isTemp]);
-
-  const handleMarkRead = async (chatId: string) => {
-    if (chatId.startsWith('temp_')) return;
-    try {
-      const token = localStorage.getItem('nestc_token');
-      await axios.post(`${BASE_URL}/chat/read/${chatId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Notify socket
-      socketRef.current?.emit('mark_read', { chatId, userId: user?.id });
-      
-      // Update local state
-      setChats(prev => prev.map(c => c.id === chatId ? { ...c, unreadCount: 0 } : c));
-    } catch (e) {
-      console.error('Failed to mark as read:', e);
-    }
-  };
+  }, [activeChat?.id]);
 
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+    if (urlListingId && urlTitle && !productDataCache[urlListingId]) {
+      setProductDataCache(prev => ({
+        ...prev,
+        [urlListingId]: { title: urlTitle, price: urlPrice, photo_url: urlImg }
+      }));
+    }
+  }, [urlListingId, urlTitle, urlImg]);
+
+  useEffect(() => {
+    if (activeChat && urlListingId && isSocketReady && hasSentAutoEnquiry.current !== urlListingId) {
+       const content = `PRODUCT_ENQUIRY:${urlListingId}:Hi, I'm interested in this!`;
+       socketRef.current?.emit('send_message', {
+         chatId: activeChat.id,
+         senderId: user.id,
+         receiverId: activeChat.sellerId,
+         content: content,
+         listingId: urlListingId
+       });
+       hasSentAutoEnquiry.current = urlListingId;
+       // Add optimistically
+       setMessages(prev => [...prev, { id: 'temp_'+Date.now(), sender_id: user.id, content, created_at: new Date().toISOString() }]);
+    }
+  }, [activeChat?.id, isSocketReady]);
 
   const handleSend = () => {
     if (!message.trim() || !activeChat || !user) return;
-
     const content = message.trim();
-    const tempId = 'temp_msg_' + Date.now();
-    
-    // Optimistic Update
-    const tempMsg = {
-      id: tempId,
-      chat_id: activeChat.id,
-      sender_id: user.id,
-      content: content,
-      created_at: new Date().toISOString(),
-      is_sending: true
+    const messageData = {
+      chatId: activeChat.id,
+      senderId: user.id,
+      receiverId: activeChat.sellerId || activeChat.chatSellerId,
+      content,
+      listingId: activeChat.listingId
     };
-    
-    setMessages(prev => [...prev, tempMsg]);
+    socketRef.current?.emit('send_message', messageData);
+    setMessages(prev => [...prev, { id: 'temp_'+Date.now(), sender_id: user.id, content, created_at: new Date().toISOString() }]);
     setMessage('');
+  };
 
-    try {
-      const messageData = {
-        chatId: activeChat.id,
-        senderId: user.id,
-        receiverId: activeChat.sellerId || activeChat.chatSellerId,
-        content: content,
-        listingId: activeChat.listingId || activeChat.listing_id
-      };
-
-      socketRef.current?.emit('send_message', messageData);
-    } catch (err) {
-      setErrorMsg('Message not sent. Try again.');
-      // Remove failed message
-      setMessages(prev => prev.filter(m => m.id !== tempId));
-    }
+  const handleRefresh = () => {
+    if (user?.id) fetchConversations(user.id);
+    if (activeChat?.id) fetchMessages(activeChat.id);
   };
 
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
-
-  useEffect(() => {
-    if (activeChat) setMobileView('chat');
-  }, [activeChat?.id]);
-
-  const handleBackToList = () => {
-    setMobileView('list');
-    setActiveChat(null);
-  };
-
-  const handleMarkSoldShortcut = async () => {
-    if (!activeChat?.listingId) return;
-    if (!confirm('Mark this product as SOLD and close the deal?')) return;
-    
-    try {
-      const token = localStorage.getItem('nestc_token');
-      await axios.patch(`${BASE_URL}/marketplace/listings/${activeChat.listingId}/traded`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert('Item marked as SOLD successfully!');
-      setActiveChat((prev: any) => ({ ...prev, listingId: null })); 
-    } catch (err) {
-      console.error('Failed to mark sold:', err);
-      setErrorMsg('Failed to update status. Please try again.');
-    }
-  };
-
-  const isUserSeller = activeChat && user && activeChat.chatSellerId === user.id;
+  useEffect(() => { if (activeChat) setMobileView('chat'); }, [activeChat?.id]);
 
   return (
-    <div className="min-h-screen">
-      <PageHeader title="Messages" subtitle="Real-time Chat" />
-      
-      <div className="max-w-7xl mx-auto px-6 md:px-12 py-12 relative">
-          {/* Error Message */}
-          <AnimatePresence>
-            {errorMsg && (
-              <motion.div 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="absolute top-0 left-1/2 -translate-x-1/2 z-50 mt-4 px-6 py-3 bg-red-500 text-white rounded-full shadow-2xl font-bold text-sm flex items-center gap-3"
-              >
-                <AlertCircle size={18} />
-                {errorMsg}
-                <button onClick={() => setErrorMsg(null)} className="ml-2 hover:opacity-70"><X size={14} /></button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-        <div className="h-[calc(100vh-250px)] flex flex-col lg:flex-row gap-8">
-
-          {/* Chat List */}
-          <div className={`w-full lg:w-80 flex flex-col gap-4 ${mobileView === 'chat' ? 'hidden lg:flex' : 'flex'}`}>
-             <div className="flex justify-between items-center px-2">
-                <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest">Recent Chats</h2>
-             </div>
-            <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-              {chats.map((chat) => (
+    <div className="min-h-screen bg-[#050505]">
+      <PageHeader title="Messenger" subtitle="Live Trade Chat" />
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="bg-white/[0.02] border border-white/10 rounded-[2.5rem] overflow-hidden flex h-[750px] shadow-2xl backdrop-blur-3xl">
+          
+          {/* Sidebar */}
+          <div className={`${mobileView === 'chat' ? 'hidden' : 'flex'} md:flex flex-col w-full md:w-96 border-r border-white/5`}>
+            <div className="p-8 border-b border-white/5 bg-white/[0.02]">
+              <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest">Conversations</h2>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+              {chats.map(chat => (
                 <div 
                   key={chat.id} 
                   onClick={() => setActiveChat(chat)}
-                  className={`glass-card p-5 cursor-pointer transition-all border-l-4 ${activeChat?.id === chat.id ? 'bg-white/[0.08] border-blue-500 shadow-xl' : 'hover:bg-white/[0.04] border-transparent'}`}
+                  className={`p-5 rounded-3xl cursor-pointer transition-all border ${activeChat?.id === chat.id ? 'bg-blue-600 border-blue-500 shadow-xl' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-white text-sm">{chat.name}</h3>
-                    <div className="flex flex-col items-end gap-2">
-                      <span className="text-[10px] text-gray-600 font-bold">{chat.time}</span>
-                      {chat.unreadCount > 0 && (
-                        <span className="w-5 h-5 bg-blue-600 text-white text-[10px] font-black flex items-center justify-center rounded-full shadow-lg shadow-blue-600/30">
-                          {chat.unreadCount}
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-bold text-white text-sm">{chat.name}</span>
+                    <span className="text-[10px] opacity-40">{chat.time}</span>
                   </div>
-                  <p className={`text-xs truncate ${chat.unreadCount > 0 ? 'text-white font-bold' : 'text-gray-500'}`}>
-                    {chat.lastMessage?.startsWith('PRODUCT_ENQUIRY:') ? '📦 Product Enquiry' : chat.lastMessage}
-                  </p>
+                  <p className="text-xs text-gray-500 truncate">{chat.lastMessage?.startsWith('PRODUCT_ENQUIRY:') ? '📦 Product Interest' : chat.lastMessage}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Chat Window */}
-          <div className={`flex-1 glass-card flex flex-col overflow-hidden border-white/5 bg-white/[0.01] ${mobileView === 'list' ? 'hidden lg:flex' : 'flex'}`}>
+          {/* Chat */}
+          <div className={`${mobileView === 'list' ? 'hidden' : 'flex'} md:flex flex-1 flex-col bg-black/20`}>
             {activeChat ? (
               <>
-                <div className="p-4 lg:p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02] backdrop-blur-md">
-                  <div className="flex items-center gap-3 lg:gap-4">
-                    {/* Back Button for Mobile */}
-                    <button 
-                      type="button"
-                      onClick={handleBackToList}
-                      className="lg:hidden p-2 -ml-2 text-gray-400 hover:text-white"
-                    >
-                      <ExternalLink size={20} className="rotate-180" />
-                    </button>
-                    
-                    <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-blue-600/10 text-blue-500 flex items-center justify-center border border-blue-500/20">
-                      <User size={20} className="lg:hidden" />
-                      <User size={24} className="hidden lg:block" />
-                    </div>
+                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                  <div className="flex items-center gap-4">
+                    <button onClick={() => setMobileView('list')} className="md:hidden p-2 -ml-2 text-gray-400"><ChevronLeft /></button>
+                    <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg">{activeChat.name.charAt(0)}</div>
                     <div>
-                      <h2 className="font-bold text-white tracking-tight">{activeChat.name}</h2>
-                      <p className="text-[10px] text-emerald-500 font-black uppercase tracking-[0.2em] flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                        Online Now
-                      </p>
+                      <h2 className="font-bold text-white">{activeChat.name}</h2>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
+                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{isConnected ? 'Active' : 'Offline'}</span>
+                      </div>
                     </div>
                   </div>
-
-                  {isUserSeller && activeChat.listingId && (
-                    <button 
-                      onClick={handleMarkSoldShortcut}
-                      className="flex items-center gap-2 px-4 py-2 bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600 hover:text-white transition-all rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-600/20 shadow-lg shadow-emerald-600/10"
-                    >
-                      <CheckCircle size={14} /> Mark Sold
-                    </button>
-                  )}
+                  <button onClick={handleRefresh} className="p-2 hover:bg-white/10 rounded-full text-gray-500"><RefreshCw size={20}/></button>
                 </div>
 
-                <div className="flex-1 p-8 overflow-y-auto flex flex-col space-y-6 custom-scrollbar">
+                <div className="flex-1 p-8 overflow-y-auto space-y-6 custom-scrollbar">
                   {messages.map((msg, i) => {
-                    const isMe = msg.sender_id === user?.id || msg.senderId === user?.id;
-                    const content = msg.content || '';
-                    const isProductEnquiry = content.startsWith('PRODUCT_ENQUIRY:');
-
+                    const isMe = msg.sender_id === user?.id;
+                    const isProductEnquiry = msg.content?.startsWith('PRODUCT_ENQUIRY:');
+                    
                     if (isProductEnquiry) {
-                      const parts = content.split(':');
+                      const parts = msg.content.split(':');
                       const lId = parts[1];
                       const text = parts.slice(2).join(':');
-                      
-                      // Auto-fetch if missing
-                      if (lId && lId !== 'null' && !productDataCache[lId]) {
-                        fetchProductPreview(lId);
-                      }
-
                       const product = productDataCache[lId];
-                      // Super-robust image detection
-                      const photoUrl = product?.photo_url || 
-                                       product?.photos?.[0]?.photo_url || 
-                                       product?.photos?.[0] || 
-                                       product?.photo || 
-                                       product?.imageUrl || 
-                                       product?.image_url;
-                      
+                      const photoUrl = product?.photo_url || product?.photos?.[0];
+
                       return (
-                        <motion.div 
-                          key={msg.id || `msg-${i}`}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-4`}
-                        >
-                          <div className={`max-w-[85%] sm:max-w-[70%] rounded-2xl overflow-hidden shadow-xl ${isMe ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white' : 'bg-white/10 text-white border border-white/10'}`}>
-                             {/* WhatsApp-style Product Header */}
-                             <div className={`p-3 flex items-center gap-4 ${isMe ? 'bg-black/20' : 'bg-white/5'} border-b border-white/5`}>
-                                 <div className="w-14 h-14 bg-black/40 rounded-lg overflow-hidden flex-shrink-0 border border-white/10 shadow-lg">
-                                    {photoUrl ? (
-                                      <img src={formatImageUrl(photoUrl)} className="w-full h-full object-contain p-1" alt="Product" />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center bg-gray-900/50">
-                                        {product ? <ImagePlaceholder size={18} className="text-gray-700" /> : <div className="animate-pulse w-4 h-4 bg-gray-600 rounded-full" />}
-                                      </div>
-                                    )}
-                                 </div>
-                                <div className="flex-1 min-w-0">
-                                   <p className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isMe ? 'text-white/50' : 'text-blue-500'}`}>Regarding this product</p>
-                                   <p className="text-xs font-bold text-white truncate leading-tight">{product?.title || 'Loading product...'}</p>
-                                   <p className="text-[10px] font-black text-white/90 mt-0.5">₹{product?.price || '...'}</p>
-                                </div>
-                             </div>
-                             {/* Message Content */}
-                             <div className="p-4">
-                                <p className="text-sm font-medium text-white leading-relaxed">{text}</p>
-                             </div>
+                        <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[80%] rounded-3xl overflow-hidden shadow-2xl border ${isMe ? 'bg-blue-600 border-blue-500' : 'bg-white/10 border-white/10'}`}>
+                            <div className="p-3 flex items-center gap-4 bg-black/20 border-b border-white/5">
+                              <div className="w-16 h-16 rounded-xl overflow-hidden bg-black/40 flex-shrink-0 border border-white/10">
+                                {photoUrl ? <img src={formatImageUrl(photoUrl)} className="w-full h-full object-cover" /> : <ImagePlaceholder className="w-full h-full p-4 opacity-20" />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-[8px] font-black uppercase text-blue-400 mb-1">Product Enquiry</p>
+                                <p className="text-sm font-bold text-white truncate">{product?.title || 'Loading...'}</p>
+                                <p className="text-xs font-black text-white/70">₹{product?.price || '...'}</p>
+                              </div>
+                            </div>
+                            <div className="p-5 text-sm text-white">{text}</div>
                           </div>
-                          <div className="flex items-center gap-2 mt-2 px-3">
-                            <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">{new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            {isMe && <Check size={10} className="text-blue-500" />}
-                          </div>
-                        </motion.div>
+                        </div>
                       );
                     }
 
                     return (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        key={msg.id || i} 
-                        className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
-                      >
-                        <div className={`max-w-[70%] p-5 rounded-[2rem] text-sm leading-relaxed shadow-xl ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white/5 text-gray-300 rounded-tl-none border border-white/5'}`}>
-                          {content}
+                      <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[70%] p-5 rounded-[2rem] text-sm shadow-xl ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white/5 text-gray-300 rounded-tl-none border border-white/10'}`}>
+                          {msg.content}
                         </div>
-                        <div className="flex items-center gap-2 mt-2 px-3">
-                          <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">{new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          {isMe && <Check size={10} className="text-blue-500" />}
-                        </div>
-                      </motion.div>
+                      </div>
                     );
                   })}
                   <div ref={scrollRef} />
                 </div>
 
-                <div className="p-8 border-t border-white/5 bg-black/40 backdrop-blur-xl">
-                  <div className="relative group">
+                <div className="p-8 border-t border-white/5 bg-black/40">
+                  <div className="flex gap-4">
                     <input 
-                      type="text" 
-                      placeholder="Write your message..."
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
+                      value={message} 
+                      onChange={(e) => setMessage(e.target.value)} 
                       onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-3xl px-8 py-5 text-white focus:outline-none focus:border-blue-500 transition-all pr-20 shadow-inner group-hover:border-white/20"
+                      className="flex-1 bg-white/[0.03] border border-white/10 rounded-[2rem] px-8 py-5 text-white focus:outline-none focus:border-blue-500 transition-all"
+                      placeholder="Type a message..."
                     />
-                    <button 
-                      type="button"
-                      onClick={handleSend}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-3.5 bg-blue-600 text-white rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-600/30"
-                    >
-                      <Send size={20} />
-                    </button>
+                    <button onClick={handleSend} className="p-5 bg-blue-600 text-white rounded-[2rem] shadow-xl hover:scale-105 transition-all"><Send size={20}/></button>
                   </div>
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center p-20 text-center opacity-20">
-                <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-6">
-                  <MessageSquare size={48} className="text-gray-600" />
-                </div>
-                <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-2">Campus Messenger</h2>
-                <p className="text-sm text-gray-500 font-medium">Select a student from the Marketplace to start chatting.</p>
+              <div className="flex-1 flex flex-col items-center justify-center p-20 text-center opacity-10">
+                <MessageSquare size={80} className="mb-6" />
+                <h2 className="text-3xl font-black uppercase tracking-tighter">NestC Messenger</h2>
+                <p>Select a student to start trading.</p>
               </div>
             )}
           </div>
