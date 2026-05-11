@@ -85,29 +85,14 @@ export default function BookPage() {
       const bookingData = res.data.booking;
       let drivers = res.data.suggestedDrivers;
       
+      // Emergency client-side sort if backend fails distance check
       if (!drivers || drivers.length === 0) {
-        // Emergency client-side sort if backend fails distance check
-        const startLat = formData.pickupLat || 11.3218;
-        const startLng = formData.pickupLng || 75.9310;
-        
-        const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-          const R = 6371;
-          const dLat = (lat2 - lat1) * (Math.PI / 180);
-          const dLon = (lon2 - lon1) * (Math.PI / 180);
-          const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-          return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        };
-
-        drivers = VERIFIED_DRIVERS.map(d => ({
-          ...d,
-          distance: calculateDistance(startLat, startLng, 11.3216, 75.9338) // Fallback to center for static list
-        })).sort((a, b) => (a.distance || 0) - (b.distance || 0));
+        drivers = VERIFIED_DRIVERS;
       }
       
       setActiveBooking(bookingData);
       setSuggestedDrivers(drivers);
       
-      setCurrentDriverIndex(0);
       setStatus('requesting');
       startPolling(bookingData.id);
     } catch (err: any) {
@@ -202,43 +187,14 @@ export default function BookPage() {
             setStatus('accepted');
             clearInterval(pollInterval.current);
           } else if (current.driver_response === 'rejected') {
-            alert('Driver rejected the ride request. Please try the next available driver.');
-            tryNextDriver();
-            clearInterval(pollInterval.current);
+            // Keep waiting for other drivers
           }
         }
       } catch (e) {}
     }, 3000);
   };
 
-  const sendWhatsAppToDriver = (driver: any) => {
-    // Use the dynamic frontend URL (fallback to current origin if env is missing)
-    const baseUrl = FRONTEND_URL || window.location.origin;
-    const acceptLink = `${baseUrl}/gate-pass/accept?bid=${activeBooking.id}&did=${driver.id}`;
-    const rejectLink = `${baseUrl}/gate-pass/reject?bid=${activeBooking.id}&did=${driver.id}`;
-    const text = encodeURIComponent(
-`NITC RIDE REQUEST!
-
-From: ${formData.pickup}
-To: ${formData.destination}
-
-✅ To ACCEPT this ride, click here:
-${acceptLink}
-
-❌ To REJECT this ride, click here:
-${rejectLink}`
-    );
-    window.open(`https://wa.me/91${driver.phone}?text=${text}`, '_blank');
-  };
-
-  const tryNextDriver = () => {
-    if (currentDriverIndex < suggestedDrivers.length - 1) {
-      setCurrentDriverIndex(prev => prev + 1);
-    } else {
-      alert('All verified drivers have been pinged. Retrying sequence...');
-      setCurrentDriverIndex(0);
-    }
-  };
+  // Removed tryNextDriver and sendWhatsAppToDriver because backend handles dispatching to all free drivers.
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -388,37 +344,20 @@ ${rejectLink}`
 
                 {status === 'requesting' && (
                   <motion.div key="requesting" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full space-y-8">
-                     <div className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10">
-                        <div className="flex items-center justify-between mb-8">
-                           <div className="px-4 py-2 bg-blue-600/10 rounded-full border border-blue-600/20">
-                              <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-2">
-                                 <RefreshCw size={10} className="animate-spin" /> Dispatch Analytics Active
-                              </p>
-                           </div>
-                           <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest italic">Min. Dist: {suggestedDrivers[0]?.distance?.toFixed(3)} km</p>
+                     <div className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 flex flex-col items-center text-center">
+                        <div className="w-20 h-20 bg-blue-600/10 rounded-full flex items-center justify-center text-blue-500 mb-6 border border-blue-600/20">
+                           <Loader2 size={32} className="animate-spin" />
                         </div>
-
-                        <div className="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-500 mx-auto mb-6"><MessageCircle size={28} /></div>
-                        <h3 className="text-2xl font-black text-white uppercase tracking-tight">{suggestedDrivers[currentDriverIndex]?.name}</h3>
-                        {suggestedDrivers[currentDriverIndex]?.distance !== undefined && (
-                          <div className="flex items-center justify-center gap-2 mt-2">
-                             <Navigation2 size={12} className="text-blue-500" />
-                             <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest italic">
-                               {suggestedDrivers[currentDriverIndex].distance.toFixed(3)} km away
-                             </p>
-                          </div>
-                        )}
-                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-1">Driver {currentDriverIndex + 1} of {suggestedDrivers.length}</p>
+                        <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">Request Broadcasted</h3>
+                        <p className="text-sm text-gray-400 max-w-xs mx-auto mb-8">
+                           We have sent WhatsApp notifications to all free drivers. Waiting for someone to accept...
+                        </p>
                         
-                        <div className="mt-8 space-y-4">
-                           <button onClick={() => sendWhatsAppToDriver(suggestedDrivers[currentDriverIndex])} className="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl transition-all flex items-center justify-center gap-3">Send WhatsApp Request <MessageCircle size={20} /></button>
-                           
-                           <div className="flex gap-3">
-                              <button onClick={tryNextDriver} className="flex-[2] py-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all">Try Next Nearest</button>
-                              <button onClick={() => window.open(`https://www.google.com/maps?q=${suggestedDrivers[currentDriverIndex].last_latitude},${suggestedDrivers[currentDriverIndex].last_longitude}`, '_blank')} className="flex-1 py-4 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center justify-center">
-                                 <MapIcon size={14} />
-                              </button>
-                           </div>
+                        <div className="flex items-center justify-center gap-3 px-6 py-3 bg-blue-600/5 rounded-2xl border border-blue-600/10">
+                           <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                           <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">
+                              Monitoring Driver Responses
+                           </p>
                         </div>
                      </div>
                   </motion.div>

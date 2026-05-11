@@ -103,7 +103,7 @@ export default function PostListingPage() {
 
       setLoading(false);
       setSuccess(true);
-      setTimeout(() => router.push('/marketplace'), 2000);
+      setTimeout(() => router.push(formData.type === 'Have' ? '/marketplace' : '/marketplace/requests'), 2000);
     } catch (err: any) {
       console.error('Post failed:', err);
       const data = err.response?.data;
@@ -125,7 +125,11 @@ export default function PostListingPage() {
             <CheckCircle2 size={40} />
           </div>
           <h2 className="text-3xl font-bold text-white mb-2">Listing Posted!</h2>
-          <p className="text-gray-500">Your post is now visible to all students.</p>
+          <p className="text-gray-500">
+            {formData.type === 'Have' 
+              ? 'Your item is now visible to all students on the marketplace.' 
+              : 'Your request has been added to the request list.'}
+          </p>
         </motion.div>
       </div>
     );
@@ -233,7 +237,9 @@ export default function PostListingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">Price (₹)</label>
+                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">
+                  {formData.type === 'Have' ? 'Price (₹)' : 'Expected Budget (₹)'}
+                </label>
                 <div className="relative">
                   <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                   <input 
@@ -268,9 +274,10 @@ export default function PostListingPage() {
             <div>
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">Description</label>
               <textarea 
+                required
                 rows={4}
-                placeholder="Product details..."
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-blue-500 transition-colors outline-none resize-none"
+                placeholder={formData.type === 'Have' ? "Describe the condition, age, and any other details..." : "Describe exactly what you are looking for..."}
+                className="w-full bg-white/5 border border-white/10 rounded-3xl p-6 text-white focus:border-blue-500 transition-colors outline-none resize-none"
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
               />

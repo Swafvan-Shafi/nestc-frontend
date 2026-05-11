@@ -43,10 +43,8 @@ export default function VendingPage() {
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
-      const gender = (parsedUser.gender || 'male').toLowerCase();
-      const visible = allHostels.filter(h => h.gender === 'both' || h.gender === gender);
-      setFilteredHostels(visible);
-      setSelectedHostelId(visible[0]?.id || '');
+      setFilteredHostels(allHostels);
+      setSelectedHostelId(allHostels[0]?.id || '');
     }
   }, []);
 
@@ -136,17 +134,6 @@ export default function VendingPage() {
                 )}
               </AnimatePresence>
             </div>
-
-            {/* Location Info */}
-            <div className="flex items-center gap-4 text-gray-400 bg-white/5 px-8 py-5 rounded-[2rem] border border-white/5 shadow-lg">
-              <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
-                <MapPin size={24} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-600">Location</p>
-                <p className="text-sm font-bold text-white">{currentHostel?.location || 'Select a hostel'}</p>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -155,20 +142,23 @@ export default function VendingPage() {
              <h2 className="text-3xl font-bold text-white tracking-tight">Available Items</h2>
              <span className="text-xs font-bold text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full">{availableItems.length} Products Available</span>
           </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 pb-20">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 pb-20">
             {mockItems.map((item) => (
               <div 
                 key={item.id} 
-                className={`glass-card p-4 flex flex-col items-center text-center relative border-white/10 ${item.stock === 0 ? 'opacity-50 grayscale' : 'hover:border-blue-500/30'} transition-all`}
+                className={`glass-card p-4 flex flex-col items-center justify-center text-center border-white/10 ${item.stock === 0 ? 'opacity-50' : 'hover:border-blue-500/30'} transition-all`}
               >
-                <span className="absolute top-2 left-3 text-[10px] font-black text-gray-500">{item.slot}</span>
-                <img src={item.image} alt={item.name} className="w-16 h-16 object-contain mb-3 mt-4" />
-                <h3 className="text-xs sm:text-sm font-bold text-white leading-tight mb-1">{item.name}</h3>
-                <p className="text-xs text-blue-400 font-black mb-3">₹{item.price}</p>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider ${item.stock > 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                  {item.stock} left
-                </span>
+                <h3 className="text-sm font-bold text-white leading-tight mb-2 line-clamp-2 min-h-[40px] flex items-center">{item.name}</h3>
+                <p className="text-sm text-blue-400 font-black mb-3">₹{item.price}</p>
+                
+                <div className="flex flex-col items-center gap-1">
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${
+                    item.stock === 0 ? 'text-red-500' : item.stock < 5 ? 'text-yellow-500' : 'text-emerald-500'
+                  }`}>
+                    {item.stock === 0 ? 'Out of Stock' : item.stock < 5 ? 'Low Stock' : 'Available'}
+                  </span>
+                  <span className="text-xs text-gray-400 font-bold">{item.stock} left</span>
+                </div>
               </div>
             ))}
           </div>
