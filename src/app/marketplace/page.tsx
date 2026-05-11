@@ -193,7 +193,7 @@ export default function MarketplacePage() {
                         type="button"
                         onClick={() => {
                           const imgParam = listing.photos?.[0] ? `&img=${encodeURIComponent(listing.photos[0])}` : '';
-                          router.push(`/chat?sellerId=${listing.seller_id}&listingId=${listing.id}&title=${encodeURIComponent(listing.title)}&price=${listing.price}${imgParam}`);
+                          router.push(`/chat?sellerId=${listing.seller_id}&listingId=${listing.id}&title=${encodeURIComponent(listing.title)}&price=${listing.price}&sellerName=${encodeURIComponent(listing.seller_name || 'Student')}${imgParam}`);
                         }}
                         className="p-3 bg-white/5 rounded-xl transition-all hover:bg-blue-600 text-blue-500 hover:text-white"
                       >

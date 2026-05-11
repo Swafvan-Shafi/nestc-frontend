@@ -18,6 +18,7 @@ function ChatContent() {
   const urlImg = searchParams.get('img');
   const urlTitle = searchParams.get('title');
   const urlPrice = searchParams.get('price');
+  const urlSellerName = searchParams.get('sellerName');
   
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
@@ -94,7 +95,6 @@ function ChatContent() {
         isTemp: false
       }));
 
-      // BRUTE FORCE: If we have a pending new chat, inject it into the list
       if (sellerId && urlListingId) {
         const ids = [userId, sellerId].sort();
         const baseId = `p2p_${ids[0].substring(0, 8)}_${ids[1].substring(0, 8)}`;
@@ -104,19 +104,19 @@ function ChatContent() {
         if (!exists) {
           const newEntry = {
             id: detId,
-            name: urlTitle || 'New Conversation',
+            name: urlSellerName || 'Student',
             sellerId: sellerId,
             listingId: urlListingId,
             isTemp: true,
             time: 'Now',
-            lastMessage: 'Starting trade...'
+            lastMessage: 'Regarding: ' + (urlTitle || 'Product')
           };
           list = [newEntry, ...list];
-          setActiveChat(newEntry);
-        } else if (!activeChat) {
+          if (!activeChatRef.current) setActiveChat(newEntry);
+        } else if (!activeChatRef.current) {
           setActiveChat(exists);
         }
-      } else if (!activeChat && list.length > 0) {
+      } else if (!activeChatRef.current && list.length > 0) {
         setActiveChat(list[0]);
       }
       
@@ -145,11 +145,7 @@ function ChatContent() {
 
       socket.on('new_message', (data) => {
         const currentActive = activeChatRef.current;
-        const isFromMe = data.message.sender_id === parsedUser.id;
-        
-        const isMatch = (currentActive?.id === data.chatId) || 
-                        (currentActive?.id === data.message.chat_id);
-
+        const isMatch = (currentActive?.id === data.chatId) || (currentActive?.id === data.message.chat_id);
         if (isMatch) {
           setMessages(prev => {
             if (prev.some(m => m.id === data.message.id)) return prev;
@@ -191,7 +187,6 @@ function ChatContent() {
          listingId: urlListingId
        });
        hasSentAutoEnquiry.current = urlListingId;
-       // Add optimistically
        setMessages(prev => [...prev, { id: 'temp_'+Date.now(), sender_id: user.id, content, created_at: new Date().toISOString() }]);
     }
   }, [activeChat?.id, isSocketReady]);
@@ -225,9 +220,8 @@ function ChatContent() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="bg-white/[0.02] border border-white/10 rounded-[2.5rem] overflow-hidden flex h-[750px] shadow-2xl backdrop-blur-3xl">
           
-          {/* Sidebar */}
           <div className={`${mobileView === 'chat' ? 'hidden' : 'flex'} md:flex flex-col w-full md:w-96 border-r border-white/5`}>
-            <div className="p-8 border-b border-white/5 bg-white/[0.02]">
+            <div className="p-8 border-b border-white/5">
               <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest">Conversations</h2>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
@@ -247,7 +241,6 @@ function ChatContent() {
             </div>
           </div>
 
-          {/* Chat */}
           <div className={`${mobileView === 'list' ? 'hidden' : 'flex'} md:flex flex-1 flex-col bg-black/20`}>
             {activeChat ? (
               <>
@@ -259,7 +252,7 @@ function ChatContent() {
                       <h2 className="font-bold text-white">{activeChat.name}</h2>
                       <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
-                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{isConnected ? 'Active' : 'Offline'}</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{isConnected ? 'Active' : 'Offline'}</span>
                       </div>
                     </div>
                   </div>
