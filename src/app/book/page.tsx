@@ -303,25 +303,25 @@ export default function BookPage() {
             <form onSubmit={handleRequest} className="space-y-8">
               <div className="group relative">
                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 ml-2">Pickup Point</label>
-                <div className="relative flex flex-col sm:block">
-                  <button 
-                    type="button"
-                    onClick={() => setActiveMapField('pickup')}
-                    className="absolute left-4 sm:left-5 top-[1.5rem] sm:top-1/2 -translate-y-1/2 text-blue-500 hover:text-white transition-all z-10 p-2 -ml-2 rounded-lg hover:bg-blue-600/20"
-                    title="Select on Map"
-                  >
-                    <MapIcon size={18} />
-                  </button>
-                  <input 
-                    type="text" 
-                    placeholder="Select map icon or type location..."
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-12 sm:pl-16 pr-4 sm:pr-32 py-4 sm:py-5 text-white focus:outline-none focus:border-blue-500 transition-all shadow-inner"
-                    value={formData.pickup}
-                    onChange={(e) => handlePickupChange(e.target.value)}
-                  />
-                  <div className="flex sm:absolute sm:right-3 sm:top-1/2 sm:-translate-y-1/2 gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
-                    <button type="button" onClick={getCurrentLocation} className="flex-[2] sm:flex-none px-4 py-3 sm:py-2 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex justify-center items-center">
-                      {isLocating ? <Loader2 size={14} className="animate-spin" /> : 'Locate Me'}
+                <div className="relative flex flex-col w-full">
+                  <div className="relative w-full">
+                    <div className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-blue-500 z-10 p-2 -ml-2 rounded-lg">
+                      <MapPin size={18} />
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="Type location..."
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-12 sm:pl-16 pr-4 py-4 sm:py-5 text-white focus:outline-none focus:border-blue-500 transition-all shadow-inner"
+                      value={formData.pickup}
+                      onChange={(e) => handlePickupChange(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-2 w-full mt-3">
+                    <button type="button" onClick={() => setActiveMapField('pickup')} className="flex-[2] py-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all flex items-center justify-center gap-2">
+                      <MapIcon size={14} className="text-blue-500" /> Choose on Map
+                    </button>
+                    <button type="button" onClick={getCurrentLocation} className="flex-[1.5] py-3 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex justify-center items-center gap-2">
+                      {isLocating ? <Loader2 size={14} className="animate-spin" /> : <><Locate size={14} /> Locate Me</>}
                     </button>
                   </div>
                 </div>
@@ -342,22 +342,24 @@ export default function BookPage() {
 
               <div className="group relative">
                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 ml-2">Destination</label>
-                <div className="relative flex flex-col sm:block">
-                  <button 
-                    type="button"
-                    onClick={() => setActiveMapField('destination')}
-                    className="absolute left-4 sm:left-5 top-[1.5rem] sm:top-1/2 -translate-y-1/2 text-emerald-500 hover:text-white transition-all z-10 p-2 -ml-2 rounded-lg hover:bg-emerald-600/20"
-                    title="Select on Map"
-                  >
-                    <MapIcon size={18} />
-                  </button>
-                  <input 
-                    type="text" 
-                    placeholder="Type destination..."
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-12 sm:pl-16 pr-4 py-4 sm:py-5 text-white focus:outline-none focus:border-emerald-500 transition-all shadow-inner"
-                    value={formData.destination}
-                    onChange={(e) => handleDestChange(e.target.value)}
-                  />
+                <div className="relative flex flex-col w-full">
+                  <div className="relative w-full">
+                    <div className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-emerald-500 z-10 p-2 -ml-2 rounded-lg">
+                      <MapPin size={18} />
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="Type destination..."
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-12 sm:pl-16 pr-4 py-4 sm:py-5 text-white focus:outline-none focus:border-emerald-500 transition-all shadow-inner"
+                      value={formData.destination}
+                      onChange={(e) => handleDestChange(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex w-full mt-3">
+                    <button type="button" onClick={() => setActiveMapField('destination')} className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all flex items-center justify-center gap-2">
+                      <MapIcon size={14} className="text-emerald-500" /> Choose on Map
+                    </button>
+                  </div>
                 </div>
 
               </div>
