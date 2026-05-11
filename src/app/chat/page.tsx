@@ -177,13 +177,18 @@ function ChatContent() {
           });
           const seller = sellerRes.data;
           
+          // Generate the SAME ID as the backend
+          const ids = [userId, sellerId].sort();
+          const baseId = `p2p_${ids[0].substring(0, 8)}_${ids[1].substring(0, 8)}`;
+          const deterministicId = `${baseId}_${urlListingId.substring(0, 8)}`;
+
           const newChat = {
-            id: `temp_${sellerId}_${urlListingId.substring(0, 8)}`,
+            id: deterministicId,
             name: seller.name || 'Student',
             lastMessage: 'Starting a new conversation...',
             time: 'Now',
             sellerId: sellerId,
-            listingId: urlListingId, // Use listingId consistently
+            listingId: urlListingId,
             unreadCount: 0,
             isTemp: true
           };
@@ -448,7 +453,14 @@ function ChatContent() {
                       }
 
                       const product = productDataCache[lId];
-                      const photoUrl = product?.photos?.[0] || product?.photo || product?.imageUrl || product?.photo_url || product?.image_url || product?.photoUrl;
+                      // Exhaustive check for image properties
+                      const photoUrl = product?.photos?.[0]?.photo_url || 
+                                       product?.photos?.[0] || 
+                                       product?.photo || 
+                                       product?.imageUrl || 
+                                       product?.photo_url || 
+                                       product?.image_url || 
+                                       product?.photoUrl;
                       
                       return (
                         <motion.div 
