@@ -31,6 +31,7 @@ function ChatContent() {
   
   const [isConnected, setIsConnected] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [replyContext, setReplyContext] = useState<any>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -99,7 +100,9 @@ function ChatContent() {
         name: c.other_user_name || 'Student',
         sellerId: c.other_user_id,
         listingId: c.listing_id,
-        chatSellerId: c.chat_seller_id,
+        productName: c.product_name,
+        productImage: c.product_image,
+        productPrice: c.product_price,
         lastMessage: c.last_message,
         time: c.last_message_time ? new Date(c.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now',
         unreadCount: parseInt(c.unread_count) || 0,
@@ -146,6 +149,9 @@ function ChatContent() {
         }
         fetchConversations(parsedUser.id);
       });
+      socket.on('chat_read', ({ chatId }) => {
+        fetchConversations(parsedUser.id);
+      });
       fetchConversations(parsedUser.id);
     }
     return () => { socketRef.current?.disconnect(); };
@@ -155,30 +161,51 @@ function ChatContent() {
     if (activeChat?.id) {
       fetchMessages(activeChat.id);
       socketRef.current?.emit('join_chat', activeChat.id);
+      if (user) {
+        socketRef.current?.emit('mark_read', { chatId: activeChat.id, userId: user.id });
+      }
     }
-  }, [activeChat?.id]);
+  }, [activeChat?.id, user?.id]);
 
   useEffect(() => {
     if (urlListingId && urlTitle) {
-      setProductDataCache(prev => ({ ...prev, [urlListingId]: { title: urlTitle, price: urlPrice, photo_url: urlImg } }));
+      const ctx = { id: urlListingId, title: urlTitle, price: urlPrice, photo: urlImg };
+      setProductDataCache(prev => ({ ...prev, [urlListingId]: ctx }));
+      setReplyContext(ctx);
     }
   }, [urlListingId, urlTitle, urlImg, urlPrice]);
 
   useEffect(() => {
     if (activeChat && urlListingId && isSocketReady && hasSentAutoEnquiry.current !== urlListingId && user) {
-       const content = `PRODUCT_ENQUIRY:${urlListingId}:Hi, I'm interested in this product!`;
-       socketRef.current?.emit('send_message', { chatId: activeChat.id, senderId: user.id, receiverId: activeChat.sellerId || sellerId, content, listingId: urlListingId });
+       // We don't send auto-message anymore, we just let the user see the reply preview
        hasSentAutoEnquiry.current = urlListingId;
-       setMessages(prev => [...prev, { id: 'temp_'+Date.now(), sender_id: user.id, content, created_at: new Date().toISOString() }]);
     }
   }, [activeChat?.id, isSocketReady, user, urlListingId]);
 
   const handleSend = () => {
     if (!message.trim() || !activeChat || !user) return;
     const content = message.trim();
-    socketRef.current?.emit('send_message', { chatId: activeChat.id, senderId: user.id, receiverId: activeChat.sellerId || activeChat.chatSellerId || sellerId, content, listingId: activeChat.listingId || urlListingId });
-    setMessages(prev => [...prev, { id: 'temp_'+Date.now(), sender_id: user.id, content, created_at: new Date().toISOString() }]);
+    
+    const payload = { 
+      chatId: activeChat.id, 
+      senderId: user.id, 
+      receiverId: activeChat.sellerId || activeChat.chatSellerId || sellerId, 
+      content, 
+      listingId: activeChat.listingId || urlListingId,
+      productContext: replyContext 
+    };
+
+    socketRef.current?.emit('send_message', payload);
+    setMessages(prev => [...prev, { 
+      id: 'temp_'+Date.now(), 
+      sender_id: user.id, 
+      content, 
+      product_context: replyContext,
+      created_at: new Date().toISOString() 
+    }]);
+    
     setMessage('');
+    setReplyContext(null); // Clear context after first message
   };
 
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
@@ -214,13 +241,27 @@ function ChatContent() {
                   onClick={() => { setActiveChat(chat); setMobileView('chat'); }} 
                   className={`p-5 rounded-[1.5rem] cursor-pointer transition-all border ${activeChat?.id === chat.id ? 'bg-blue-600 border-blue-500 shadow-xl' : 'bg-white/5 border-transparent hover:bg-white/10'}`}
                 >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-bold text-white text-sm truncate pr-2">{chat.name}</span>
-                    <span className="text-[9px] opacity-40 font-bold whitespace-nowrap">{chat.time}</span>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/5">
+                      {chat.productImage ? (
+                        <img src={formatImageUrl(chat.productImage)} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="text-white/20" size={24} />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-bold text-white text-sm truncate pr-2">{chat.name}</span>
+                        <span className="text-[9px] opacity-40 font-bold whitespace-nowrap">{chat.time}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {chat.productName && <Package size={10} className="text-blue-400 flex-shrink-0" />}
+                        <p className={`text-[10px] truncate ${activeChat?.id === chat.id ? 'text-white/70' : 'text-gray-500'}`}>
+                          {chat.productName ? `${chat.productName}: ` : ''}{chat.lastMessage}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <p className={`text-xs truncate ${activeChat?.id === chat.id ? 'text-white/70' : 'text-gray-500'}`}>
-                    {chat.lastMessage?.startsWith('PRODUCT_ENQUIRY:') ? '📦 Product Interest' : chat.lastMessage}
-                  </p>
                 </div>
               ))}
             </div>
@@ -293,12 +334,32 @@ function ChatContent() {
                       );
                     }
 
+                    const productCtx = msg.product_context;
+
                     return (
                       <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[85%] p-4 md:p-5 rounded-[2rem] text-sm leading-relaxed shadow-xl ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white/10 text-gray-300 rounded-tl-none border border-white/5'}`}>
-                          {content}
-                          <div className="flex justify-end mt-2 opacity-30 text-[9px] font-bold">
-                            {new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <div className={`max-w-[85%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                          {productCtx && (
+                            <div className="mb-2 p-3 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-3 w-fit max-w-full backdrop-blur-sm">
+                              <div className="w-10 h-10 rounded-lg overflow-hidden bg-black/40 flex-shrink-0">
+                                {productCtx.photo ? (
+                                  <img src={formatImageUrl(productCtx.photo)} className="w-full h-full object-cover" />
+                                ) : (
+                                  <Package className="w-full h-full p-2 opacity-20" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-[8px] font-bold text-blue-400 uppercase tracking-widest">Regarding this product</p>
+                                <p className="text-xs font-bold text-white truncate">{productCtx.title}</p>
+                                <p className="text-[10px] text-white/50">₹{productCtx.price}</p>
+                              </div>
+                            </div>
+                          )}
+                          <div className={`p-4 md:p-5 rounded-[2rem] text-sm leading-relaxed shadow-xl ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white/10 text-gray-300 rounded-tl-none border border-white/5'}`}>
+                            {content}
+                            <div className="flex justify-end mt-2 opacity-30 text-[9px] font-bold">
+                              {new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -307,6 +368,32 @@ function ChatContent() {
                 </div>
 
                 <div className="p-6 md:p-8 border-t border-white/5 bg-black/40 backdrop-blur-3xl">
+                  <AnimatePresence>
+                    {replyContext && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="mb-4 p-4 bg-blue-600/20 border border-blue-500/30 rounded-3xl flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/40">
+                            {replyContext.photo ? (
+                              <img src={formatImageUrl(replyContext.photo)} className="w-full h-full object-cover" />
+                            ) : (
+                              <Package className="w-full h-full p-2 opacity-20" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-0.5">Replying regarding</p>
+                            <h4 className="text-sm font-bold text-white">{replyContext.title}</h4>
+                          </div>
+                        </div>
+                        <button onClick={() => setReplyContext(null)} className="p-2 hover:bg-white/10 rounded-full text-white/40"><X size={18}/></button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
                   <div className="flex gap-4">
                     <input 
                       value={message} 
