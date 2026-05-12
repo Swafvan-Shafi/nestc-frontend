@@ -163,9 +163,11 @@ function ChatContent() {
     return () => { socketRef.current?.disconnect(); };
   }, []);
 
+  const hasHandledUrl = useRef(false);
+
   // Handle URL deep-linking
   useEffect(() => {
-    if (user && sellerId) {
+    if (user && sellerId && !hasHandledUrl.current) {
       const detId = getDeterministicId(user.id, sellerId, urlListingId || undefined);
       const existing = chats.find(c => c.id === detId);
       
@@ -182,9 +184,9 @@ function ChatContent() {
         unreadCount: existing ? existing.unreadCount : 0
       };
 
-      // Always set active chat from URL if it's a direct navigation
       setActiveChat(urlChatEntry);
       setMobileView('chat');
+      hasHandledUrl.current = true;
     }
   }, [user?.id, sellerId, urlListingId, urlImg, urlTitle, urlSellerName, chats.length]);
 
