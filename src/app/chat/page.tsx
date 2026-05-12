@@ -60,8 +60,7 @@ function ChatContent() {
   const getDeterministicId = (uid1: string, uid2: string, lid?: string) => {
     if (!uid1 || !uid2) return 'unknown';
     const ids = [uid1, uid2].sort();
-    const baseId = `p2p_${ids[0].substring(0, 8)}_${ids[1].substring(0, 8)}`;
-    return lid ? `${baseId}_listing${lid}` : baseId;
+    return `p2p_${ids[0].substring(0, 8)}_${ids[1].substring(0, 8)}`;
   };
 
   const fetchProductPreview = useCallback(async (lId: string) => {
