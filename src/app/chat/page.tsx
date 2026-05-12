@@ -98,6 +98,7 @@ function ChatContent() {
       let list = rawData.map((c: any) => ({
         id: c.id,
         name: c.other_user_name || 'Student',
+        email: c.other_user_email,
         sellerId: c.other_user_id,
         listingId: c.listing_id,
         productName: c.product_name,
@@ -293,42 +294,19 @@ function ChatContent() {
                     const isMe = msg.sender_id === user?.id || msg.senderId === user?.id;
                     const content = msg.content || '';
                     
+                    // Standard Message Rendering (Legacy format cleanup)
                     if (content.startsWith('PRODUCT_ENQUIRY:')) {
                       const parts = content.split(':');
-                      const lId = parts[1];
                       const text = parts.slice(2).join(':');
-                      if (lId && !productDataCache[lId]) fetchProductPreview(lId);
-                      const product = productDataCache[lId];
-                      
-                      // Fix: Check product.data if wrapped, and check multiple image fields
-                      const actualProduct = product?.data || product;
-                      const photoUrl = actualProduct?.photo_url || 
-                                       (Array.isArray(actualProduct?.photos) ? actualProduct.photos[0] : actualProduct?.photos) || 
-                                       actualProduct?.imageUrl || 
-                                       actualProduct?.photo;
-
+                      // We treat legacy enquiries as plain messages now to avoid top-banner confusion
                       return (
                         <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[90%] sm:max-w-[75%] rounded-3xl overflow-hidden shadow-2xl border ${isMe ? 'bg-blue-600 border-blue-500' : 'bg-white/10 border-white/10'}`}>
-                            <div className="p-3 md:p-4 flex items-center gap-4 bg-black/20 border-b border-white/5">
-                              <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden bg-black/40 flex-shrink-0 border border-white/10">
-                                {photoUrl ? (
-                                  <img 
-                                    src={formatImageUrl(photoUrl)} 
-                                    className="w-full h-full object-cover" 
-                                    onError={(e: any) => { e.target.src = ''; e.target.style.display = 'none'; }}
-                                  />
-                                ) : (
-                                  <ImagePlaceholder className="w-full h-full p-4 opacity-10" />
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-[8px] font-black uppercase text-blue-400 mb-1 tracking-widest">Trade Inquiry</p>
-                                <p className="text-sm font-bold text-white truncate">{actualProduct?.title || 'Loading Product...'}</p>
-                                <p className="text-xs font-black text-white/70">₹{actualProduct?.price || '...'}</p>
-                              </div>
+                          <div className={`max-w-[85%] p-4 md:p-5 rounded-[2rem] text-sm leading-relaxed shadow-xl ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white/10 text-gray-300 rounded-tl-none border border-white/5'}`}>
+                            <p className="text-[10px] font-black uppercase text-blue-400 mb-1 opacity-50">Legacy Inquiry</p>
+                            {text}
+                            <div className="flex justify-end mt-2 opacity-30 text-[9px] font-bold">
+                              {new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
-                            <div className="p-4 md:p-5 text-sm text-white leading-relaxed">{text}</div>
                           </div>
                         </div>
                       );

@@ -48,7 +48,7 @@ export default function NotificationDropdown({ isOpen, onClose }: { isOpen: bool
         id: m.id,
         type: 'chat',
         title: `Message from ${m.sender_name}`,
-        body: m.content.startsWith('PRODUCT_ENQUIRY:') ? `📦 Enquiry: ${m.product_title}` : m.content,
+        body: m.content,
         time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         read: false,
         chatId: m.chat_id
