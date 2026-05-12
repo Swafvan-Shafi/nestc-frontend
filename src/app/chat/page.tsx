@@ -272,7 +272,17 @@ function ChatContent() {
   };
 
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
-  useEffect(() => { if (activeChat) setMobileView('chat'); }, [activeChat?.id]);
+  
+  const handleBackToList = () => {
+    setActiveChat(null);
+    setMobileView('list');
+    // Also clear URL params to stop deep-linking from re-activating the chat
+    router.push('/chat', { scroll: false });
+  };
+
+  useEffect(() => { 
+    if (activeChat) setMobileView('chat'); 
+  }, [activeChat?.id]);
 
   if (loading && !chats.length) {
     return <div className="min-h-screen flex items-center justify-center bg-[#050505] text-white flex-col gap-4">
@@ -291,42 +301,54 @@ function ChatContent() {
       <div className={`max-w-7xl mx-auto ${mobileView === 'chat' ? 'p-0 h-screen' : 'px-4 py-8'} md:px-4 md:py-8`}>
         <div className={`bg-white/[0.02] border border-white/10 ${mobileView === 'chat' ? 'rounded-0 h-full border-0' : 'rounded-[2.5rem] h-[750px] shadow-2xl'} md:rounded-[2.5rem] md:h-[750px] md:border md:shadow-2xl overflow-hidden flex backdrop-blur-3xl transition-all duration-500`}>
           
-          {/* Sidebar */}
+          {/* Sidebar / List View */}
           <div className={`${mobileView === 'chat' ? 'hidden' : 'flex'} md:flex flex-col w-full md:w-96 border-r border-white/5 bg-black/40`}>
             <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
               <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest">Conversations</h2>
               <button onClick={() => user && fetchConversations(user.id)} className="p-2 hover:bg-white/5 rounded-full text-gray-600 transition-all active:rotate-180"><RefreshCw size={16}/></button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-              {chats.map(chat => (
-                <div 
-                  key={chat.id} 
-                  onClick={() => { setActiveChat(chat); setMobileView('chat'); }} 
-                  className={`p-5 rounded-[1.5rem] cursor-pointer transition-all border ${activeChat?.id === chat.id ? 'bg-blue-600 border-blue-500 shadow-xl' : 'bg-white/5 border-transparent hover:bg-white/10'}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/5">
-                      {chat.productImage ? (
-                        <img src={formatImageUrl(chat.productImage)} className="w-full h-full object-cover" />
-                      ) : (
-                        <User className="text-white/20" size={24} />
+              {chats.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full opacity-20 p-10 text-center">
+                  <MessageSquare size={48} className="mb-4" />
+                  <p className="text-xs font-bold uppercase tracking-widest">No history yet</p>
+                </div>
+              ) : (
+                chats.map(chat => (
+                  <div 
+                    key={chat.id} 
+                    onClick={() => { setActiveChat(chat); setMobileView('chat'); }} 
+                    className={`p-5 rounded-[1.5rem] cursor-pointer transition-all border ${activeChat?.id === chat.id ? 'bg-blue-600 border-blue-500 shadow-xl' : 'bg-white/5 border-transparent hover:bg-white/10'}`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/5">
+                        {chat.productImage ? (
+                          <img src={formatImageUrl(chat.productImage)} className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="text-white/20" size={24} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-bold text-white text-sm truncate pr-2">{chat.name}</span>
+                          <span className="text-[9px] opacity-40 font-bold whitespace-nowrap">{chat.time}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {chat.productName && <Tag size={10} className="text-blue-400 flex-shrink-0" />}
+                          <p className={`text-[10px] truncate ${activeChat?.id === chat.id ? 'text-white/70' : 'text-gray-500'}`}>
+                            {chat.productName ? `${chat.productName}: ` : ''}{chat.lastMessage || 'Click to view chat'}
+                          </p>
+                        </div>
+                      </div>
+                      {chat.unreadCount > 0 && (
+                        <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-black text-white">
+                          {chat.unreadCount}
+                        </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-bold text-white text-sm truncate pr-2">{chat.name}</span>
-                        <span className="text-[9px] opacity-40 font-bold whitespace-nowrap">{chat.time}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {chat.productName && <Package size={10} className="text-blue-400 flex-shrink-0" />}
-                        <p className={`text-[10px] truncate ${activeChat?.id === chat.id ? 'text-white/70' : 'text-gray-500'}`}>
-                          {chat.productName ? `${chat.productName}: ` : ''}{chat.lastMessage}
-                        </p>
-                      </div>
-                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -336,7 +358,7 @@ function ChatContent() {
               <>
                 <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02] backdrop-blur-xl">
                   <div className="flex items-center gap-4">
-                    <button onClick={() => setMobileView('list')} className="md:hidden p-2 -ml-2 text-gray-400 hover:text-white transition-colors"><ChevronLeft size={28}/></button>
+                    <button onClick={handleBackToList} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors"><ChevronLeft size={28}/></button>
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg text-lg">
                       {activeChat.name?.charAt(0).toUpperCase()}
                     </div>
