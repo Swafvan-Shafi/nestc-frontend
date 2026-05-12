@@ -124,9 +124,11 @@ function ChatContent() {
             lastMessage: 'Regarding: ' + (urlTitle || 'Product')
           };
           list = [newEntry, ...list];
-          if (!activeChatRef.current) setActiveChat(newEntry);
-        } else if (!activeChatRef.current) {
+          setActiveChat(newEntry);
+          setMobileView('chat');
+        } else {
           setActiveChat(exists);
+          setMobileView('chat');
         }
       } else if (!activeChatRef.current && list.length > 0) {
         setActiveChat(list[0]);
