@@ -198,6 +198,13 @@ function ChatContent() {
 
   const handleSend = () => {
     if (!message.trim() || !activeChat || !user) return;
+    
+    if (!isConnected || !socketRef.current?.connected) {
+      setErrorMsg('Connecting to server... please wait 5 seconds and try again.');
+      setTimeout(() => setErrorMsg(null), 3000);
+      return;
+    }
+
     const content = message.trim();
     
     const payload = { 
@@ -301,6 +308,12 @@ function ChatContent() {
                   </div>
                   <button className="p-2 text-gray-600 hover:text-white"><MoreVertical size={20}/></button>
                 </div>
+
+                {errorMsg && (
+                  <div className="bg-red-500/20 border-b border-red-500/30 p-2 text-center text-[10px] text-red-400 font-bold uppercase tracking-widest animate-pulse">
+                    {errorMsg}
+                  </div>
+                )}
 
                 <div className="flex-1 p-6 md:p-8 overflow-y-auto space-y-6 custom-scrollbar bg-gradient-to-b from-transparent to-black/30" ref={scrollRef}>
                   {messages.map((msg, i) => {
