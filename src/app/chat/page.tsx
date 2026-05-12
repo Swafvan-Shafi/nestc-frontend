@@ -165,20 +165,20 @@ function ChatContent() {
 
   // Handle URL deep-linking
   useEffect(() => {
-    if (user && sellerId && urlListingId) {
-      const detId = getDeterministicId(user.id, sellerId, urlListingId);
+    if (user && sellerId) {
+      const detId = getDeterministicId(user.id, sellerId, urlListingId || undefined);
       const existing = chats.find(c => c.id === detId);
       
       const urlChatEntry = {
         id: detId,
-        name: urlSellerName || (existing ? existing.name : 'New Inquiry'),
+        name: urlSellerName || (existing ? existing.name : 'Student'),
         sellerId: sellerId,
-        listingId: urlListingId,
-        productImage: urlImg,
-        productName: urlTitle,
+        listingId: urlListingId || undefined,
+        productImage: urlImg || undefined,
+        productName: urlTitle || undefined,
         isTemp: !existing,
         time: existing ? existing.time : 'Now',
-        lastMessage: existing ? existing.lastMessage : ('Regarding: ' + (urlTitle || 'Product')),
+        lastMessage: existing ? existing.lastMessage : (urlTitle ? 'Regarding: ' + urlTitle : 'Chat started...'),
         unreadCount: existing ? existing.unreadCount : 0
       };
 
