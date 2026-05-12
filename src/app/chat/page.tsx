@@ -111,9 +111,10 @@ function ChatContent() {
 
       setChats(list);
       
-      // If no active chat set yet, default to first one in list
+      // DISABLED: Auto-selecting first chat. 
+      // We now show the chat list "Home" by default unless a deep-link is active.
       if (!activeChatRef.current && list.length > 0 && !sellerId) {
-        setActiveChat(list[0]);
+        // setActiveChat(list[0]); // REMOVED
       }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
