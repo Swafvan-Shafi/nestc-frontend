@@ -253,12 +253,22 @@ function ChatContent() {
     setMessage('');
     setReplyContext(null);
 
-    if (!isConnected || !socketRef.current?.connected) {
-      // Background retry logic could be added here, but for now we just try to emit
-      // Socket.io usually queues emits if not connected yet but configured correctly
-    }
-
-    socketRef.current?.emit('send_message', payload);
+    socketRef.current?.emit('send_message', payload, (response: any) => {
+      if (response && response.success) {
+        setMessages(prev => {
+          const idx = prev.findIndex(m => m.id === tempId);
+          if (idx !== -1) {
+            const updated = [...prev];
+            updated[idx] = { ...response.message, is_pending: false };
+            return updated;
+          }
+          return prev;
+        });
+      } else {
+        setErrorMsg('Failed to send. Reconnecting...');
+        setTimeout(() => setErrorMsg(null), 3000);
+      }
+    });
   };
 
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
