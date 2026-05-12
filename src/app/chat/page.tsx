@@ -132,11 +132,28 @@ function ChatContent() {
       socket.on('connect', () => { setIsConnected(true); setIsSocketReady(true); socket.emit('register_user', parsedUser.id); });
       socket.on('new_message', (data) => {
         if (activeChatRef.current?.id === data.chatId || activeChatRef.current?.id === data.message.chat_id) {
-          setMessages(prev => prev.some(m => m.id === data.message.id) ? prev : [...prev, data.message]);
+          setMessages(prev => {
+            // If we have a temp message with same content and recent timestamp, replace it
+            const existingIndex = prev.findIndex(m => m.id.toString().startsWith('temp_') && m.content === data.message.content);
+            if (existingIndex !== -1) {
+              const newMsgs = [...prev];
+              newMsgs[existingIndex] = data.message;
+              return newMsgs;
+            }
+            return prev.some(m => m.id === data.message.id) ? prev : [...prev, data.message];
+          });
         }
         fetchConversations(parsedUser.id);
       });
+      socket.on('messages_delivered', ({ chatId }) => {
+        if (activeChatRef.current?.id === chatId) {
+          setMessages(prev => prev.map(m => ({ ...m, is_delivered: true })));
+        }
+      });
       socket.on('chat_read', ({ chatId }) => {
+        if (activeChatRef.current?.id === chatId) {
+          setMessages(prev => prev.map(m => ({ ...m, is_read: true, is_delivered: true })));
+        }
         fetchConversations(parsedUser.id);
       });
 
@@ -196,16 +213,21 @@ function ChatContent() {
     }
   }, [activeChat?.id, isSocketReady, user, urlListingId]);
 
+  // Auto-wake Render backend
+  useEffect(() => {
+    const wake = async () => {
+      try { await axios.get(BASE_URL.replace('/api/v1', '')); } catch (e) {}
+    };
+    wake();
+    const interval = setInterval(wake, 1000 * 60 * 10); // Every 10 mins
+    return () => clearInterval(interval);
+  }, []);
+
   const handleSend = () => {
     if (!message.trim() || !activeChat || !user) return;
     
-    if (!isConnected || !socketRef.current?.connected) {
-      setErrorMsg('Connecting to server... please wait 5 seconds and try again.');
-      setTimeout(() => setErrorMsg(null), 3000);
-      return;
-    }
-
     const content = message.trim();
+    const tempId = 'temp_' + Date.now();
     
     const payload = { 
       chatId: activeChat.id, 
@@ -216,17 +238,27 @@ function ChatContent() {
       productContext: replyContext 
     };
 
-    socketRef.current?.emit('send_message', payload);
-    setMessages(prev => [...prev, { 
-      id: 'temp_'+Date.now(), 
+    // Optimistic Update
+    const optimisticMsg = { 
+      id: tempId, 
       sender_id: user.id, 
       content, 
       product_context: replyContext,
-      created_at: new Date().toISOString() 
-    }]);
-    
+      created_at: new Date().toISOString(),
+      is_read: false,
+      is_delivered: false,
+      is_pending: true // Local flag for spinner
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
     setMessage('');
-    setReplyContext(null); // Clear context after first message
+    setReplyContext(null);
+
+    if (!isConnected || !socketRef.current?.connected) {
+      // Background retry logic could be added here, but for now we just try to emit
+      // Socket.io usually queues emits if not connected yet but configured correctly
+    }
+
+    socketRef.current?.emit('send_message', payload);
   };
 
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
@@ -359,10 +391,31 @@ function ChatContent() {
                               </div>
                             </div>
                           )}
-                          <div className={`p-4 md:p-5 rounded-[2rem] text-sm leading-relaxed shadow-xl ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white/10 text-gray-300 rounded-tl-none border border-white/5'}`}>
+                          <div className={`p-4 md:p-5 rounded-[2rem] text-sm leading-relaxed shadow-xl relative ${isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white/10 text-gray-300 rounded-tl-none border border-white/5'}`}>
                             {content}
-                            <div className="flex justify-end mt-2 opacity-30 text-[9px] font-bold">
-                              {new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <div className="flex items-center justify-end mt-2 gap-1.5">
+                              <span className="opacity-30 text-[9px] font-bold">
+                                {new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              {isMe && (
+                                <div className="flex items-center ml-0.5">
+                                  {msg.is_pending ? (
+                                    <Clock size={10} className="text-white/40" />
+                                  ) : msg.is_read ? (
+                                    <div className="flex -space-x-1.5">
+                                      <Check size={12} className="text-blue-300" strokeWidth={3} />
+                                      <Check size={12} className="text-blue-300" strokeWidth={3} />
+                                    </div>
+                                  ) : msg.is_delivered ? (
+                                    <div className="flex -space-x-1.5">
+                                      <Check size={12} className="text-white/40" strokeWidth={3} />
+                                      <Check size={12} className="text-white/40" strokeWidth={3} />
+                                    </div>
+                                  ) : (
+                                    <Check size={12} className="text-white/40" strokeWidth={3} />
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
