@@ -279,23 +279,32 @@ function ChatContent() {
     router.push('/chat', { scroll: false });
   };
 
-  const [deletingChat, setDeletingChat] = useState<string | null>(null);
-  const handleDeleteConversation = async (chatId: string) => {
-    if (!chatId || !user) return;
-    if (!window.confirm('Are you sure you want to delete this conversation? This cannot be undone.')) return;
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteConversation = async () => {
+    if (!activeChat?.id || !user) return;
+    setIsDeleting(true);
     
     try {
       const token = localStorage.getItem('nestc_token');
-      await axios.delete(`${BASE_URL}/chat/conversations/${chatId}`, {
+      await axios.delete(`${BASE_URL}/chat/conversations/${activeChat.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setChats(prev => prev.filter(c => c.id !== chatId));
+      setChats(prev => prev.filter(c => c.id !== activeChat.id));
+      setShowDeleteModal(false);
       handleBackToList();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Delete failed:', err);
-      alert('Failed to delete conversation.');
+      alert(`Failed to delete: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
+
+  useEffect(() => { 
+    if (activeChat) setMobileView('chat'); 
+  }, [activeChat?.id]);
 
   useEffect(() => { 
     if (activeChat) setMobileView('chat'); 
@@ -388,8 +397,11 @@ function ChatContent() {
                     </div>
                   </div>
                   <button 
-                    onClick={() => handleDeleteConversation(activeChat.id)}
-                    className="p-2 text-gray-600 hover:text-red-500 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowDeleteModal(true);
+                    }}
+                    className="p-2 text-gray-600 hover:text-red-500 transition-all active:scale-90 relative z-50"
                     title="Delete Conversation"
                   >
                     <Trash2 size={20}/>
@@ -528,6 +540,43 @@ function ChatContent() {
           </div>
         </div>
       </div>
+
+      {/* Premium Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-black/60">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-[#0a0a0a] border border-white/10 p-8 rounded-[2.5rem] max-w-sm w-full shadow-2xl text-center"
+            >
+              <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 text-red-500">
+                <Trash2 size={40} />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Delete Conversation?</h3>
+              <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                This will permanently remove your messages with <span className="text-white font-bold">{activeChat?.name}</span>. This action cannot be undone.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={handleDeleteConversation}
+                  disabled={isDeleting}
+                  className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? <Loader2 size={18} className="animate-spin" /> : 'Yes, Delete Chat'}
+                </button>
+                <button 
+                  onClick={() => setShowDeleteModal(false)}
+                  className="w-full py-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-2xl font-bold transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
