@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, Clock, Tag, MessageCircle, AlertCircle, ShoppingCart, DollarSign, User, RefreshCw, LayoutGrid } from 'lucide-react';
+import { Search, Plus, Clock, Tag, MessageCircle, AlertCircle, ShoppingCart, DollarSign, User, RefreshCw, LayoutGrid, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import { useRouter } from 'next/navigation';
