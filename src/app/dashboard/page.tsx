@@ -82,6 +82,8 @@ export default function DashboardPage() {
               </Link>
             ))}
           </div>
+        </section>
+
         {/* Recent Chat History - VISIBILITY FIX */}
         {recentChats.length > 0 && (
           <section className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
