@@ -10,11 +10,12 @@ import axios from 'axios';
 import { BASE_URL } from '@/lib/api';
 
 const API_URL = BASE_URL;
-const categories = ['All', 'Books', 'Electronics', 'Stationery', 'Lab', 'Cycles', 'Clothing', 'Other'];
+const categories = ['All', 'Books', 'Electronics', 'Calculator', 'Cycles', 'Stationery', 'Lab Coat', 'Clothing', 'Other'];
 
 export default function MarketplacePage() {
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState('All');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showUrgentOnly, setShowUrgentOnly] = useState(false);
   const [listings, setListings] = useState<any[]>([]);
@@ -136,20 +137,56 @@ export default function MarketplacePage() {
           </Link>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar border-b border-white/5">
-          {categories.map((cat) => (
-            <button 
-              key={cat}
-              type="button"
-              onClick={() => setActiveCategory(cat)}
-              className={`px-8 py-3 rounded-2xl transition-all whitespace-nowrap text-sm font-bold ${activeCategory === cat ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-gray-500 hover:text-white'}`}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="flex items-center justify-between border-b border-white/5 pb-6">
+          <div className="flex flex-col">
+            <h2 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-2">Category Selection</h2>
+            <div className="relative group">
+              <button 
+                onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                className="flex items-center gap-4 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-white transition-all min-w-[200px]"
+              >
+                <Tag size={18} className="text-blue-500" />
+                <span className="font-bold flex-1 text-left">{activeCategory}</span>
+                <ChevronDown size={18} className={`text-gray-600 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              
+              <AnimatePresence>
+                {showCategoryDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowCategoryDropdown(false)} />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute left-0 top-full mt-3 w-64 bg-[#0a0a0a] border border-white/10 rounded-3xl shadow-2xl z-50 overflow-hidden backdrop-blur-2xl p-2"
+                    >
+                      <div className="grid grid-cols-1 gap-1">
+                        {categories.map((cat) => (
+                          <button 
+                            key={cat}
+                            onClick={() => { setActiveCategory(cat); setShowCategoryDropdown(false); }}
+                            className={`w-full px-4 py-3 rounded-2xl text-left text-sm font-bold transition-all ${activeCategory === cat ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          <div className="hidden md:flex flex-col items-end">
+            <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2">Inventory Stats</h2>
+            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+              <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{filteredListings.length} Active Items</span>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 pb-20">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8 pb-20">
           <AnimatePresence mode="wait">
             {loading ? (
                Array.from({ length: 4 }).map((_, i) => (
@@ -174,27 +211,27 @@ export default function MarketplacePage() {
                     <img src={listing.photos[0]} alt={listing.title} className="w-full h-full object-contain p-2" />
                   </div>
                 )}
-                <div className="p-8 flex-1 flex flex-col">
-                  <div className="flex justify-between items-start mb-4">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500">{listing.category}</span>
-                    <span className="text-[10px] text-gray-500 font-bold flex items-center gap-1"><Clock size={12} /> {new Date(listing.created_at).toLocaleDateString()}</span>
+                <div className="p-3 sm:p-8 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-2 sm:mb-4">
+                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-blue-500">{listing.category}</span>
+                    <span className="hidden sm:flex text-[10px] text-gray-500 font-bold items-center gap-1"><Clock size={12} /> {new Date(listing.created_at).toLocaleDateString()}</span>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2 line-clamp-2 leading-tight">{listing.title}</h3>
+                  <h3 className="text-sm sm:text-xl font-bold text-white mb-1 sm:mb-2 line-clamp-2 leading-tight">{listing.title}</h3>
                   {listing.description && (
-                    <p className="text-xs text-gray-400 mb-6 line-clamp-3 leading-relaxed">{listing.description}</p>
+                    <p className="hidden sm:block text-xs text-gray-400 mb-6 line-clamp-3 leading-relaxed">{listing.description}</p>
                   )}
-                  <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl mb-6 mt-auto">
-                    <div className="p-2 rounded-lg bg-blue-500/20 text-blue-500"><User size={16} /></div>
-                    <div>
-                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Seller</p>
-                      <p className="text-sm font-bold text-white">{listing.seller_name || 'Anonymous Student'}</p>
+                  <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white/5 rounded-xl mb-4 sm:mb-6 mt-auto">
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-blue-500/20 text-blue-500"><User size={12} className="sm:hidden" /><User size={16} className="hidden sm:block" /></div>
+                    <div className="min-w-0">
+                      <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest hidden sm:block">Seller</p>
+                      <p className="text-[10px] sm:text-sm font-bold text-white truncate">{listing.seller_name?.split(' ')[0] || 'Student'}</p>
                       {listing.seller_hostel && (
-                        <p className="text-[10px] text-blue-500 font-bold tracking-wider mt-0.5">{listing.seller_hostel}</p>
+                        <p className="text-[8px] sm:text-[10px] text-blue-500 font-bold tracking-wider mt-0.5 truncate">{listing.seller_hostel}</p>
                       )}
                     </div>
                   </div>
-                  <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
-                    <span className="text-2xl font-black text-white">₹{listing.price}</span>
+                  <div className="mt-auto pt-3 sm:pt-6 border-t border-white/5 flex items-center justify-between">
+                    <span className="text-base sm:text-2xl font-black text-white">₹{listing.price}</span>
                     
                     {currentUser?.id !== listing.seller_id ? (
                       <button 
@@ -203,12 +240,12 @@ export default function MarketplacePage() {
                           const imgParam = listing.photos?.[0] ? `&img=${encodeURIComponent(listing.photos[0])}` : '';
                           router.push(`/chat?sellerId=${listing.seller_id}&listingId=${listing.id}&title=${encodeURIComponent(listing.title)}&price=${listing.price}&sellerName=${encodeURIComponent(listing.seller_name || 'Student')}${imgParam}`);
                         }}
-                        className="p-3 bg-white/5 rounded-xl transition-all hover:bg-blue-600 text-blue-500 hover:text-white"
+                        className="p-2 sm:p-3 bg-white/5 rounded-xl transition-all hover:bg-blue-600 text-blue-500 hover:text-white"
                       >
-                        <MessageCircle size={22} />
+                        <MessageCircle size={18} className="sm:hidden" /><MessageCircle size={22} className="hidden sm:block" />
                       </button>
                     ) : (
-                      <Link href="/marketplace/my-listings" prefetch={false} className="text-[9px] font-black uppercase text-blue-500 tracking-widest hover:underline transition-all">Edit Listing</Link>
+                      <Link href="/marketplace/my-listings" prefetch={false} className="text-[8px] sm:text-[9px] font-black uppercase text-blue-500 tracking-widest hover:underline transition-all">Edit</Link>
                     )}
                   </div>
                 </div>
