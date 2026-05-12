@@ -152,25 +152,24 @@ function ChatContent() {
       const detId = getDeterministicId(user.id, sellerId, urlListingId);
       const existing = chats.find(c => c.id === detId);
       
-      if (existing) {
-        setActiveChat(existing);
-      } else {
-        const newEntry = {
-          id: detId,
-          name: urlSellerName || 'New Inquiry',
-          sellerId: sellerId,
-          listingId: urlListingId,
-          productImage: urlImg,
-          productName: urlTitle,
-          isTemp: true,
-          time: 'Now',
-          lastMessage: 'Regarding: ' + (urlTitle || 'Product')
-        };
-        setActiveChat(newEntry);
-      }
+      const urlChatEntry = {
+        id: detId,
+        name: urlSellerName || (existing ? existing.name : 'New Inquiry'),
+        sellerId: sellerId,
+        listingId: urlListingId,
+        productImage: urlImg,
+        productName: urlTitle,
+        isTemp: !existing,
+        time: existing ? existing.time : 'Now',
+        lastMessage: existing ? existing.lastMessage : ('Regarding: ' + (urlTitle || 'Product')),
+        unreadCount: existing ? existing.unreadCount : 0
+      };
+
+      // Always set active chat from URL if it's a direct navigation
+      setActiveChat(urlChatEntry);
       setMobileView('chat');
     }
-  }, [user?.id, sellerId, urlListingId, chats.length]);
+  }, [user?.id, sellerId, urlListingId, urlImg, urlTitle, urlSellerName, chats.length]);
 
   useEffect(() => {
     if (activeChat?.id) {
