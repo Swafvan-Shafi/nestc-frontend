@@ -160,6 +160,8 @@ function ChatContent() {
           name: urlSellerName || 'New Inquiry',
           sellerId: sellerId,
           listingId: urlListingId,
+          productImage: urlImg,
+          productName: urlTitle,
           isTemp: true,
           time: 'Now',
           lastMessage: 'Regarding: ' + (urlTitle || 'Product')
