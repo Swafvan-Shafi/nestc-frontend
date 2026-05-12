@@ -96,7 +96,7 @@ export default function DashboardPage() {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {recentChats.map((chat, i) => (
-                <Link key={chat.id} href={`/chat?sellerId=${chat.other_user_id}&listingId=${chat.listing_id || ''}&title=${encodeURIComponent(chat.product_name || '')}`}>
+                <Link key={chat.id} href={`/chat?chatId=${chat.id}&sellerId=${chat.other_user_id}&listingId=${chat.listing_id || ''}&title=${encodeURIComponent(chat.product_name || '')}`}>
                   <div className="glass-card p-5 flex items-center gap-4 hover:border-blue-500/50 group transition-all">
                     <div className="w-12 h-12 rounded-xl bg-blue-600/10 flex items-center justify-center text-blue-500 shrink-0 group-hover:scale-110 transition-transform">
                        {chat.product_image ? (

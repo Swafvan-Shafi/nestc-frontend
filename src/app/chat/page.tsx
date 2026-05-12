@@ -15,6 +15,7 @@ function ChatContent() {
   const searchParams = useSearchParams();
   const sellerId = searchParams.get('sellerId');
   const urlListingId = searchParams.get('listingId');
+  const urlChatId = searchParams.get('chatId');
   const urlImg = searchParams.get('img');
   const urlTitle = searchParams.get('title');
   const urlPrice = searchParams.get('price');
@@ -160,21 +161,16 @@ function ChatContent() {
       // Initial Fetch
       fetchConversations(parsedUser.id);
     }
-    return () => { socketRef.current?.disconnect(); };
-  }, []);
-
-  const hasHandledUrl = useRef(false);
-
-  // Handle URL deep-linking
+  // Handle URL deep-linking with high priority
   useEffect(() => {
-    if (user && sellerId && !hasHandledUrl.current) {
-      const detId = getDeterministicId(user.id, sellerId, urlListingId || undefined);
+    if (user && (urlChatId || sellerId)) {
+      const detId = urlChatId || getDeterministicId(user.id, sellerId!, urlListingId || undefined);
       const existing = chats.find(c => c.id === detId);
       
       const urlChatEntry = {
         id: detId,
         name: urlSellerName || (existing ? existing.name : 'Student'),
-        sellerId: sellerId,
+        sellerId: sellerId || (existing ? existing.sellerId : null),
         listingId: urlListingId || undefined,
         productImage: urlImg || undefined,
         productName: urlTitle || undefined,
@@ -184,11 +180,13 @@ function ChatContent() {
         unreadCount: existing ? existing.unreadCount : 0
       };
 
-      setActiveChat(urlChatEntry);
-      setMobileView('chat');
-      hasHandledUrl.current = true;
+      // Only update if it's different to prevent loops
+      if (activeChatRef.current?.id !== detId) {
+        setActiveChat(urlChatEntry);
+        setMobileView('chat');
+      }
     }
-  }, [user?.id, sellerId, urlListingId, urlImg, urlTitle, urlSellerName, chats.length]);
+  }, [user?.id, urlChatId, sellerId, chats.length]);
 
   useEffect(() => {
     if (activeChat?.id) {
