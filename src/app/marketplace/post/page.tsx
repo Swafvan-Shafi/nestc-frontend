@@ -9,7 +9,7 @@ import axios from 'axios';
 import { BASE_URL } from '@/lib/api';
 
 const API_URL = BASE_URL;
-const categories = ['Books', 'Electronics', 'Cycles', 'Stationery', 'Lab', 'Clothing', 'Other'];
+const categories = ['Books', 'Electronics', 'Calculator', 'Cycles', 'Stationery', 'Lab Coat', 'Clothing', 'Other'];
 
 export default function PostListingPage() {
   const router = useRouter();
