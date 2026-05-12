@@ -116,9 +116,9 @@ export default function PageHeader({ title, subtitle, action }: PageHeaderProps)
           
           <div className="flex items-center bg-white/5 p-1.5 rounded-2xl border border-white/5 relative">
             <button 
-              type="button"
+              type="button" 
               onClick={() => router.push('/chat')}
-              className="p-3 text-gray-500 hover:text-white hover:bg-white/5 rounded-xl transition-all hidden xs:block"
+              className="p-3 text-gray-500 hover:text-white hover:bg-white/5 rounded-xl transition-all"
             >
               <MessageSquare size={20} />
             </button>

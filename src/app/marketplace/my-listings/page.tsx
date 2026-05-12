@@ -97,6 +97,16 @@ export default function MyListingsPage() {
       <PageHeader 
         title="My Shop" 
         subtitle="Manage Your Listings" 
+        action={
+          <Link 
+            href="/chat" 
+            prefetch={false} 
+            title="View Chat History"
+            className="p-3 bg-white/5 text-gray-400 hover:bg-blue-600 hover:text-white rounded-xl transition-all shadow-lg flex items-center justify-center border border-white/10"
+          >
+             <MessageCircle size={20} />
+          </Link>
+        }
       />
 
       <div className="max-w-7xl mx-auto px-6 md:px-12 py-12 space-y-12">

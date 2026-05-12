@@ -81,7 +81,15 @@ export default function MarketplacePage() {
         title="Marketplace" 
         subtitle="Live Campus Trade" 
         action={
-          <div className="flex items-center">
+          <div className="flex items-center gap-3">
+             <Link 
+               href="/chat" 
+               prefetch={false} 
+               title="View Chat History"
+               className="p-3 bg-white/5 text-gray-400 hover:bg-blue-600 hover:text-white rounded-xl transition-all shadow-lg flex items-center justify-center border border-white/10"
+             >
+                <MessageCircle size={20} />
+             </Link>
              <Link href="/marketplace/post" prefetch={false} className="p-3 bg-blue-600/10 text-blue-500 hover:bg-blue-600 hover:text-white rounded-xl transition-all shadow-lg flex items-center justify-center">
                 <Plus size={20} />
              </Link>
