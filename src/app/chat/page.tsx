@@ -2,7 +2,7 @@
 
 import PageHeader from '@/components/PageHeader';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Send, User, Clock, Check, Loader2, ImageIcon, CheckCircle, Tag, ShoppingBag, ExternalLink, Image as ImagePlaceholder, AlertCircle, X, ChevronLeft, RefreshCw, MoreVertical } from 'lucide-react';
+import { MessageSquare, Send, User, Clock, Check, Loader2, ImageIcon, CheckCircle, Tag, ShoppingBag, ExternalLink, Image as ImagePlaceholder, AlertCircle, X, ChevronLeft, RefreshCw, MoreVertical, Trash2 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -279,6 +279,24 @@ function ChatContent() {
     router.push('/chat', { scroll: false });
   };
 
+  const [deletingChat, setDeletingChat] = useState<string | null>(null);
+  const handleDeleteConversation = async (chatId: string) => {
+    if (!chatId || !user) return;
+    if (!window.confirm('Are you sure you want to delete this conversation? This cannot be undone.')) return;
+    
+    try {
+      const token = localStorage.getItem('nestc_token');
+      await axios.delete(`${BASE_URL}/chat/conversations/${chatId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setChats(prev => prev.filter(c => c.id !== chatId));
+      handleBackToList();
+    } catch (err) {
+      console.error('Delete failed:', err);
+      alert('Failed to delete conversation.');
+    }
+  };
+
   useEffect(() => { 
     if (activeChat) setMobileView('chat'); 
   }, [activeChat?.id]);
@@ -369,7 +387,13 @@ function ChatContent() {
                       </div>
                     </div>
                   </div>
-                  <button className="p-2 text-gray-600 hover:text-white"><MoreVertical size={20}/></button>
+                  <button 
+                    onClick={() => handleDeleteConversation(activeChat.id)}
+                    className="p-2 text-gray-600 hover:text-red-500 transition-colors"
+                    title="Delete Conversation"
+                  >
+                    <Trash2 size={20}/>
+                  </button>
                 </div>
 
                 {errorMsg && (
