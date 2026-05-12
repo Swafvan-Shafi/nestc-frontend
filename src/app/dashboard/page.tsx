@@ -45,11 +45,11 @@ export default function DashboardPage() {
         subtitle={`Hello, ${displayName.split(' ')[0]}! • Roll No: ${user?.rollNo || 'B210xxxCS'}`}
       />
 
-      <div className="max-w-7xl mx-auto px-4 md:px-12 py-4 sm:py-12 flex-1 flex flex-col justify-center">
+      <div className="max-w-7xl mx-auto px-4 md:px-12 py-12 space-y-12">
         
         {/* Primary Navigation - Large Interactive Cards */}
-        <section className="flex-1 flex flex-col justify-center pb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8 flex-1 max-h-[70vh]">
+        <section className="pb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8">
             {[
               { label: "Book a Ride", icon: Car, href: "/book", color: "from-blue-600 to-indigo-600", desc: "Request auto or taxi drivers at the gate" },
               { label: "Vending Stock", icon: Package, href: "/vending", color: "from-emerald-600 to-teal-600", desc: "Real-time stock for hostel machines" },
