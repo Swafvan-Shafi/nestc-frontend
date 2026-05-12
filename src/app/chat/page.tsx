@@ -61,7 +61,7 @@ function ChatContent() {
     if (!uid1 || !uid2) return 'unknown';
     const ids = [uid1, uid2].sort();
     const baseId = `p2p_${ids[0].substring(0, 8)}_${ids[1].substring(0, 8)}`;
-    return lid ? `${baseId}_${lid.substring(0, 8)}` : baseId;
+    return lid ? `${baseId}_listing${lid}` : baseId;
   };
 
   const fetchProductPreview = useCallback(async (lId: string) => {
@@ -110,6 +110,8 @@ function ChatContent() {
         isTemp: false
       }));
 
+      let finalChatList = list;
+
       if (sellerId && urlListingId) {
         const detId = getDeterministicId(userId, sellerId, urlListingId);
         const exists = list.find((c: any) => c.id === detId);
@@ -123,7 +125,7 @@ function ChatContent() {
             time: 'Now',
             lastMessage: 'Regarding: ' + (urlTitle || 'Product')
           };
-          list = [newEntry, ...list];
+          finalChatList = [newEntry, ...list];
           setActiveChat(newEntry);
           setMobileView('chat');
         } else {
@@ -133,7 +135,7 @@ function ChatContent() {
       } else if (!activeChatRef.current && list.length > 0) {
         setActiveChat(list[0]);
       }
-      setChats(list);
+      setChats(finalChatList);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
