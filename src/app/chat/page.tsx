@@ -110,32 +110,12 @@ function ChatContent() {
         isTemp: false
       }));
 
-      let finalChatList = list;
-
-      if (sellerId && urlListingId) {
-        const detId = getDeterministicId(userId, sellerId, urlListingId);
-        const exists = list.find((c: any) => c.id === detId);
-        if (!exists) {
-          const newEntry = {
-            id: detId,
-            name: urlSellerName || 'New Inquiry',
-            sellerId: sellerId,
-            listingId: urlListingId,
-            isTemp: true,
-            time: 'Now',
-            lastMessage: 'Regarding: ' + (urlTitle || 'Product')
-          };
-          finalChatList = [newEntry, ...list];
-          setActiveChat(newEntry);
-          setMobileView('chat');
-        } else {
-          setActiveChat(exists);
-          setMobileView('chat');
-        }
-      } else if (!activeChatRef.current && list.length > 0) {
+      setChats(list);
+      
+      // If no active chat set yet, default to first one in list
+      if (!activeChatRef.current && list.length > 0 && !sellerId) {
         setActiveChat(list[0]);
       }
-      setChats(finalChatList);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -145,6 +125,8 @@ function ChatContent() {
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
+      
+      // Initialize Socket
       const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
       socketRef.current = socket;
       socket.on('connect', () => { setIsConnected(true); setIsSocketReady(true); socket.emit('register_user', parsedUser.id); });
@@ -157,10 +139,36 @@ function ChatContent() {
       socket.on('chat_read', ({ chatId }) => {
         fetchConversations(parsedUser.id);
       });
+
+      // Initial Fetch
       fetchConversations(parsedUser.id);
     }
     return () => { socketRef.current?.disconnect(); };
-  }, [sellerId, urlListingId]);
+  }, []);
+
+  // Handle URL deep-linking
+  useEffect(() => {
+    if (user && sellerId && urlListingId) {
+      const detId = getDeterministicId(user.id, sellerId, urlListingId);
+      const existing = chats.find(c => c.id === detId);
+      
+      if (existing) {
+        setActiveChat(existing);
+      } else {
+        const newEntry = {
+          id: detId,
+          name: urlSellerName || 'New Inquiry',
+          sellerId: sellerId,
+          listingId: urlListingId,
+          isTemp: true,
+          time: 'Now',
+          lastMessage: 'Regarding: ' + (urlTitle || 'Product')
+        };
+        setActiveChat(newEntry);
+      }
+      setMobileView('chat');
+    }
+  }, [user?.id, sellerId, urlListingId, chats.length]);
 
   useEffect(() => {
     if (activeChat?.id) {
