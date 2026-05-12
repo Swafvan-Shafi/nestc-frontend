@@ -30,6 +30,11 @@ export default function NotificationDropdown({ isOpen, onClose }: { isOpen: bool
       });
     });
 
+    // Listen for read events to clear notifications
+    socket.on('messages_read', ({ chatId }) => {
+      setNotifications(prev => prev.filter(notif => notif.chatId !== chatId));
+    });
+
     fetchUnreadMessages(user.id);
 
     return () => {

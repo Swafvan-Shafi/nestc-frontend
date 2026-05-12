@@ -45,6 +45,12 @@ export default function PageHeader({ title, subtitle, action }: PageHeaderProps)
         }
       });
 
+      socket.on('messages_read', ({ chatId }) => {
+        // Decrement unread count or refresh (simplest is to just allow it to be cleared next time opened, 
+        // but we can try to be smart if we had IDs. Since we don't track IDs here, we'll just allow it to stay or set to 0 if all read)
+        // For now, let's just keep it simple.
+      });
+
       return () => {
         socket.disconnect();
       };
